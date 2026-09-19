@@ -1,0 +1,30 @@
+{
+  "generator": "runnora-instructions",
+  "scenario": "ペット登録",
+  "source": "practice/runbooks/generated/pet/post_addPet.suite.yml",
+  "sha256": "aad406722c2be107d235e2cd8b2073ea7e0c9c0b62642cd1d61cb3dd039f5ad9",
+  "files": [
+    "cases.qmd",
+    "expectations.qmd",
+    "http.qmd",
+    "request-json.qmd",
+    "scenario.qmd"
+  ],
+  "inputs": [
+    {
+      "kind": "runbook",
+      "path": "practice/runbooks/generated/pet/post_addPet.suite.yml",
+      "sha256": "aad406722c2be107d235e2cd8b2073ea7e0c9c0b62642cd1d61cb3dd039f5ad9"
+    },
+    {
+      "kind": "runbook",
+      "path": "practice/runbooks/generated/pet/post_addPet.template.yml",
+      "sha256": "82a17f08a5b9eaa3426cccc816eca0f09cff13fcda0ea9cf5f015f71e8375940"
+    },
+    {
+      "kind": "case",
+      "path": "practice/cases/generated/pet/post_addPet/default.json",
+      "sha256": "25a1212d2fa0ea124aac948122a96f72add7d2cab2f15c271cd6fce1f251fdad"
+    }
+  ]
+}

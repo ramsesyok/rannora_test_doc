@@ -1,0 +1,44 @@
+# 注意: .gitignore ではインライン（行末）コメント不可。コメントは必ず行頭に置く。
+# 執筆フォルダ（既定 docs）は改名可能なので、パターンはフォルダ名に依存させず
+# 「名前」でマッチさせる。
+#
+# 管理対象（＝コミットする）:
+#   - 本文（_quarto.yml / index.qmd / chapters/ / diagrams/）
+#   - 機構ファイル（design-doc.lua / design-doc.css / postprocess-html.js /
+#     mermaid-config.json / .template-version）… 発行者が ddq init・ddq update で置く
+#   - design-doc.pdf … 発行者が定期的に作る「中間版」。レビューの基準になるので残す
+
+# ==== ビルド生成物 ====
+_book/
+# Quarto の keep-typ 中間ファイル（通常は自動削除）
+index.typ
+
+# ==== 発行者の setup がビルド前に置く PDF 用の機構ファイル ====
+# 実体は発行者が持つ template/ にある。doc リポジトリでは管理しない。
+lib.typ
+typst-template.typ
+typst-show.typ
+_quarto-publish.yml
+
+# ==== ツールの作業/キャッシュディレクトリ ====
+.quarto/
+**/*.quarto_ipynb
+# Quarto が執筆フォルダ直下に自動生成する .gitignore（中身は /.quarto/）。
+# 直下フォルダ（docs/ や改名後）のものだけ無視し、ルートの .gitignore は残す。
+/*/.gitignore
+
+# ==== mermaid 変換キャッシュ（内容ハッシュ名 mmd-xxxx.*） ====
+# diagrams/ に置いた静的図（自分で描いた .mmd/.svg）は無視しない。
+**/diagrams/mmd-*
+
+# ==== ページ目視確認用の一時画像（chk-*.png / page-*.png など） ====
+chk-*.png
+page-*.png
+
+# ==== 配布スナップショット（配布時に作り直す） ====
+*.zip
+
+# ==== OS / エディタ ====
+.DS_Store
+Thumbs.db
+*~

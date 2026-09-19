@@ -1,0 +1,29 @@
+{
+  "generator": "runnora-instructions",
+  "scenario": "IDによるペット取得",
+  "source": "practice/runbooks/generated/pet/get_getPetById.suite.yml",
+  "sha256": "ac890a152ac1ca5c38e446c2d9c2362d5b932c2a8fa9bbcb0a3a2e0d9b317fd3",
+  "files": [
+    "cases.qmd",
+    "expectations.qmd",
+    "http.qmd",
+    "scenario.qmd"
+  ],
+  "inputs": [
+    {
+      "kind": "runbook",
+      "path": "practice/runbooks/generated/pet/get_getPetById.suite.yml",
+      "sha256": "ac890a152ac1ca5c38e446c2d9c2362d5b932c2a8fa9bbcb0a3a2e0d9b317fd3"
+    },
+    {
+      "kind": "runbook",
+      "path": "practice/runbooks/generated/pet/get_getPetById.template.yml",
+      "sha256": "5e3ea840a9c67cbf6364eaf79444c7ed2ce9ded1656e0c56cb1df76bca6ffe28"
+    },
+    {
+      "kind": "case",
+      "path": "practice/cases/generated/pet/get_getPetById/default.json",
+      "sha256": "fbb6294ee64eea9b2e26587477eb9b301542c16e3c344b7697ed968ef60406ac"
+    }
+  ]
+}

@@ -1,0 +1,14 @@
+# 中間版の PDF はコミットするので、改行変換の対象にしない（壊れるため）。
+*.pdf binary
+# SVG は差分が見えるようにテキスト扱い。
+*.svg text
+# 機構ファイルは LF に統一する（発行者の template/ 側と同じ）。
+# CRLF に変換されると、発行者が setup を走らせるたびに「差分あり」に見えてしまう。
+*.lua text eol=lf
+*.js text eol=lf
+*.css text eol=lf
+*.json text eol=lf
+.template-version text eol=lf
+*.typ text eol=lf
+*.sh text eol=lf
+*.bat text eol=crlf

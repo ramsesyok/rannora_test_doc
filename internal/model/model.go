@@ -1,0 +1,101 @@
+package model
+
+// Scenario is the format-neutral document model. Parsing runn syntax and
+// rendering a particular table layout are deliberately kept separate.
+type Scenario struct {
+	ID          string
+	Name        string
+	SourcePath  string
+	SourceHash  string
+	Steps       []Step
+	Cases       []Case
+	BeforeHooks []Asset
+	AfterHooks  []Asset
+	Sources     []SourceRef
+}
+
+type Step struct {
+	Number      int
+	ID          string
+	Description string
+	Kind        StepKind
+	HTTP        *HTTPRequest
+	GRPC        *GRPCRequest
+	DBQuery     string
+	Bind        map[string]string
+	Test        string
+	Status      StatusExpectation
+	SourcePath  string
+	SourceLine  int
+}
+
+type StepKind string
+
+const (
+	StepHTTP    StepKind = "http"
+	StepGRPC    StepKind = "grpc"
+	StepDB      StepKind = "db"
+	StepBind    StepKind = "bind"
+	StepInclude StepKind = "include"
+	StepTest    StepKind = "test"
+	StepUnknown StepKind = "unknown"
+)
+
+type HTTPRequest struct {
+	Runner      string
+	Endpoint    string
+	Method      string
+	Path        string
+	Headers     any
+	Query       any
+	Body        any
+	ContentType string
+}
+
+type GRPCRequest struct {
+	Runner  string
+	Address string
+	Method  string
+	RPCType RPCType
+	Headers any
+	Message any
+	Timeout string
+}
+
+type RPCType string
+
+const (
+	RPCUnary           RPCType = "Unary"
+	RPCServerStreaming RPCType = "Server streaming"
+	RPCUnsupported     RPCType = "Unsupported streaming"
+	RPCUnknown         RPCType = "Unknown"
+)
+
+type StatusExpectation struct {
+	Protocol string
+	Value    string
+	Variable string
+}
+
+type Case struct {
+	ID          string
+	Name        string
+	Description string
+	SourcePath  string
+	Data        map[string]any
+	Expectation map[string]any
+	SourceHash  string
+}
+
+type Asset struct {
+	Path    string
+	Content string
+	Origin  string
+	SHA256  string
+}
+
+type SourceRef struct {
+	Kind   string `json:"kind"`
+	Path   string `json:"path"`
+	SHA256 string `json:"sha256"`
+}

@@ -1,0 +1,475 @@
+package render
+
+import (
+	"encoding/json"
+	"fmt"
+	"hash/fnv"
+	"path/filepath"
+	"sort"
+	"strconv"
+	"strings"
+
+	"github.com/ramsesyok/runnora-test-instructions/internal/model"
+)
+
+type Document struct {
+	Name    string
+	Content []byte
+}
+
+func ScenarioDocuments(scenario *model.Scenario) []Document {
+	documents := []Document{{Name: "scenario.qmd", Content: []byte(renderScenario(scenario))}}
+	if content := renderCases(scenario); content != "" {
+		documents = append(documents, Document{Name: "cases.qmd", Content: []byte(content)})
+	}
+	if content := renderHooks(scenario, true); content != "" {
+		documents = append(documents, Document{Name: "before.qmd", Content: []byte(content)})
+	}
+	if content := renderHooks(scenario, false); content != "" {
+		documents = append(documents, Document{Name: "after.qmd", Content: []byte(content)})
+	}
+	if content := renderHTTP(scenario); content != "" {
+		documents = append(documents, Document{Name: "http.qmd", Content: []byte(content)})
+	}
+	if content := renderGRPC(scenario); content != "" {
+		documents = append(documents, Document{Name: "grpc.qmd", Content: []byte(content)})
+	}
+	if content := renderRequestData(scenario, false); content != "" {
+		documents = append(documents, Document{Name: "request-json.qmd", Content: []byte(content)})
+	}
+	if content := renderRequestData(scenario, true); content != "" {
+		documents = append(documents, Document{Name: "grpc-request.qmd", Content: []byte(content)})
+	}
+	if content := renderExpectations(scenario); content != "" {
+		documents = append(documents, Document{Name: "expectations.qmd", Content: []byte(content)})
+	}
+	return documents
+}
+
+func renderScenario(scenario *model.Scenario) string {
+	rows := make([][]string, 0, len(scenario.Steps))
+	for _, step := range scenario.Steps {
+		requestReference := ""
+		detail := step.Description
+		switch step.Kind {
+		case model.StepHTTP:
+			detail += "\\\n@" + label(scenario.ID, "http") + " 手順 " + strconv.Itoa(step.Number)
+			if step.HTTP.Body != nil {
+				requestReference = "@" + label(scenario.ID, "request", step.ID)
+			}
+		case model.StepGRPC:
+			detail += "\\\n" + string(step.GRPC.RPCType) + " " + step.GRPC.Method
+			if step.GRPC.Message != nil {
+				requestReference = "@" + label(scenario.ID, "grpc-request", step.ID)
+			}
+		case model.StepDB:
+			detail += "\\\nDB query"
+		case model.StepBind:
+			detail += "\\\n変数を設定"
+		case model.StepTest:
+			detail += "\\\n検証のみ"
+		}
+		status := ""
+		if step.Status.Value != "" {
+			status = "ステータス：" + step.Status.Protocol + " " + step.Status.Value
+		} else if step.Status.Variable != "" {
+			status = "ステータス：" + step.Status.Protocol + " " + step.Status.Variable
+		}
+		if step.Test != "" {
+			if status != "" {
+				status += "\\\n"
+			}
+			status += "期待値：@" + label(scenario.ID, "expect", step.ID)
+		}
+		rows = append(rows, []string{strconv.Itoa(step.Number), detail, requestReference, status, ""})
+	}
+	return generatedHeader(scenario) +
+		"::: {.landscape}\n" +
+		fmt.Sprintf("::: {.tbl caption=\"テストシナリオ\" label=\"%s\" widths=\"8,46,20,20,6\" breakable-rows=\"true\"}\n", label(scenario.ID, "scenario")) +
+		scenarioGrid(scenario.Name, rows, []int{8, 54, 24, 30, 8}, alignCenter, alignLeft, alignLeft, alignLeft, alignCenter) + ":::\n:::\n"
+}
+
+func renderCases(scenario *model.Scenario) string {
+	if len(scenario.Cases) == 0 {
+		return ""
+	}
+	if len(scenario.Cases) == 1 && len(scenario.Cases[0].Data) == 0 && len(scenario.Cases[0].Expectation) == 0 {
+		return ""
+	}
+	requestRef := firstRequestReference(scenario)
+	expectRef := firstExpectationReference(scenario)
+	rows := make([][]string, 0, len(scenario.Cases))
+	for _, caseValue := range scenario.Cases {
+		input := strings.Join(caseInputSummary(caseValue, requestRef), "\\\n")
+		expect := expectationSummary(caseValue.Expectation, expectRef)
+		rows = append(rows, []string{caseValue.Name, caseValue.Description, input, expect, filepath.Base(caseValue.SourcePath)})
+	}
+	return generatedHeader(scenario) + tableBlock(
+		captionWithScenario("ケースデータ一覧", scenario.Name), label(scenario.ID, "cases"), "16,33,25,10,16",
+		[]string{"ケース", "説明", "入力", "期待値", "出典"}, rows, []int{16, 36, 34, 20, 24},
+		alignLeft, alignLeft, alignLeft, alignLeft, alignLeft)
+}
+
+func renderHTTP(scenario *model.Scenario) string {
+	var rows [][]string
+	for _, step := range scenario.Steps {
+		if step.HTTP == nil {
+			continue
+		}
+		rows = append(rows, []string{
+			strconv.Itoa(step.Number), step.HTTP.Method,
+			joinURL(step.HTTP.Endpoint, step.HTTP.Path), compactJSON(step.HTTP.Headers), compactJSON(step.HTTP.Query),
+		})
+	}
+	if len(rows) == 0 {
+		return ""
+	}
+	return generatedHeader(scenario) + tableBlock(
+		captionWithScenario("HTTP 呼び出し情報", scenario.Name), label(scenario.ID, "http"), "6,8,46,20,20",
+		[]string{"手順", "Method", "URL", "Headers", "Query"}, rows, []int{6, 8, 54, 32, 32},
+		alignCenter, alignLeft, alignLeft, alignLeft, alignLeft)
+}
+
+func renderGRPC(scenario *model.Scenario) string {
+	var rows [][]string
+	for _, step := range scenario.Steps {
+		if step.GRPC == nil {
+			continue
+		}
+		rows = append(rows, []string{
+			strconv.Itoa(step.Number), step.GRPC.Runner, step.GRPC.Address, step.GRPC.Method,
+			string(step.GRPC.RPCType), compactJSON(step.GRPC.Headers), step.GRPC.Timeout,
+		})
+	}
+	if len(rows) == 0 {
+		return ""
+	}
+	return generatedHeader(scenario) + tableBlock(
+		captionWithScenario("gRPC 呼び出し情報", scenario.Name), label(scenario.ID, "grpc"), "7,10,18,25,15,15,10",
+		[]string{"手順", "Runner", "Address", "Service/Method", "RPC type", "Metadata", "Timeout"}, rows, []int{6, 10, 20, 38, 18, 22, 12})
+}
+
+func renderRequestData(scenario *model.Scenario, grpc bool) string {
+	var blocks strings.Builder
+	for _, step := range scenario.Steps {
+		var value any
+		prefix := "request"
+		caption := "リクエストボディ"
+		if grpc {
+			if step.GRPC == nil || step.GRPC.Message == nil {
+				continue
+			}
+			value = step.GRPC.Message
+			prefix = "grpc-request"
+			caption = "gRPC 送信メッセージ"
+		} else {
+			if step.HTTP == nil || step.HTTP.Body == nil {
+				continue
+			}
+			value = step.HTTP.Body
+		}
+		rows := flattenRows(value)
+		headers := []string{"JSON path", "値"}
+		widthsAttr := "35,65"
+		widths := []int{34, 70}
+		if templateCaseReference(value) && len(scenario.Cases) > 0 {
+			rows = nil
+			for _, caseValue := range scenario.Cases {
+				caseRequest := caseValue.Data["requestBody"]
+				if grpc {
+					caseRequest = caseValue.Data["message"]
+				}
+				if caseRequest == nil {
+					continue
+				}
+				for _, row := range flattenRows(caseRequest) {
+					rows = append(rows, []string{caseValue.Name, row[0], row[1]})
+				}
+			}
+			headers = []string{"ケース", "JSON path", "値"}
+			widthsAttr = "18,32,50"
+			widths = []int{18, 34, 58}
+		}
+		blocks.WriteString(tableBlock(
+			fmt.Sprintf("%s（%s／手順 %d）", caption, scenario.Name, step.Number), label(scenario.ID, prefix, step.ID), widthsAttr,
+			headers, rows, widths))
+		blocks.WriteByte('\n')
+	}
+	if blocks.Len() == 0 {
+		return ""
+	}
+	return generatedHeader(scenario) + blocks.String()
+}
+
+func renderExpectations(scenario *model.Scenario) string {
+	var blocks strings.Builder
+	for _, step := range scenario.Steps {
+		if step.Test == "" {
+			continue
+		}
+		rows := [][]string{{"検証式", step.Test, sourceLocation(step.SourcePath, step.SourceLine)}}
+		if step.Status.Value != "" {
+			rows = append(rows, []string{"ステータス", step.Status.Protocol + " " + step.Status.Value, "検証式から抽出"})
+		}
+		if strings.Contains(step.Test, "vars.case.") {
+			for _, caseValue := range scenario.Cases {
+				for _, expected := range flattenExpectationRows(caseValue) {
+					pathExpression := "vars.case.expect" + strings.TrimPrefix(expected[0], "$")
+					usage := "ケース定義（検証式参照未確認）"
+					if strings.Contains(step.Test, pathExpression) {
+						usage = "ケース定義（検証式参照）"
+					}
+					rows = append(rows, []string{"ケース " + caseValue.Name, expected[0] + ": " + expected[1], filepath.Base(caseValue.SourcePath) + "\\\n" + usage})
+				}
+			}
+		}
+		blocks.WriteString(tableBlock(
+			fmt.Sprintf("期待値・検証条件（%s／手順 %d）", scenario.Name, step.Number), label(scenario.ID, "expect", step.ID), "18,62,20",
+			[]string{"区分", "内容", "出典"}, rows, []int{18, 72, 26}))
+		blocks.WriteByte('\n')
+	}
+	if blocks.Len() == 0 {
+		return ""
+	}
+	return generatedHeader(scenario) + blocks.String()
+}
+
+func renderHooks(scenario *model.Scenario, before bool) string {
+	assets := scenario.AfterHooks
+	caption := "後処理"
+	labelPart := "after"
+	if before {
+		assets = scenario.BeforeHooks
+		caption = "前処理"
+		labelPart = "before"
+	}
+	if len(assets) == 0 {
+		return ""
+	}
+	rows := make([][]string, 0, len(assets))
+	for i, asset := range assets {
+		rows = append(rows, []string{strconv.Itoa(i + 1), filepath.Base(asset.Path), strings.TrimSpace(asset.Content), asset.Path})
+	}
+	return generatedHeader(scenario) + tableBlock(
+		captionWithScenario(caption, scenario.Name), label(scenario.ID, labelPart), "8,20,52,20",
+		[]string{"順序", "ファイル", "SQL/PLSQL", "出典"}, rows, []int{6, 24, 70, 34})
+}
+
+func captionWithScenario(caption, scenarioName string) string {
+	if strings.TrimSpace(scenarioName) == "" {
+		return caption
+	}
+	return caption + "（" + scenarioName + "）"
+}
+
+func tableBlock(caption, tableLabel, widthsAttr string, headers []string, rows [][]string, widths []int, alignments ...columnAlignment) string {
+	return fmt.Sprintf("::: {.landscape}\n::: {.tbl caption=\"%s\" label=\"%s\" widths=\"%s\" breakable-rows=\"true\"}\n%s:::\n:::\n",
+		caption, tableLabel, widthsAttr, gridTable(headers, rows, widths, alignments...))
+}
+
+func generatedHeader(scenario *model.Scenario) string {
+	return fmt.Sprintf("<!-- Code generated by runnora-instructions; DO NOT EDIT.\nsource: %s\nsha256: %s\n-->\n\n", scenario.SourcePath, scenario.SourceHash)
+}
+
+func sourceLocation(path string, line int) string {
+	name := filepath.Base(path)
+	location := ":" + strconv.Itoa(line)
+	if displayWidth(name+location) <= 24 {
+		return name + location
+	}
+	if index := strings.LastIndex(name, ".template"); index > 0 {
+		stem := name[:index]
+		if separator := strings.Index(stem, "_"); separator > 0 && displayWidth(stem) > 18 {
+			stem = stem[:separator+1] + "\\\n" + breakCamelIdentifier(stem[separator+1:], 12)
+		}
+		return stem + "\\\n" + name[index:] + location
+	}
+	if index := strings.LastIndex(name, "."); index > 0 {
+		return name[:index] + "\\\n" + name[index:] + location
+	}
+	return name + "\\\n" + strconv.Itoa(line)
+}
+
+func breakCamelIdentifier(value string, maxWidth int) string {
+	if displayWidth(value) <= maxWidth {
+		return value
+	}
+	var words []string
+	start := 0
+	runes := []rune(value)
+	for index := 1; index < len(runes); index++ {
+		if runes[index] >= 'A' && runes[index] <= 'Z' {
+			words = append(words, string(runes[start:index]))
+			start = index
+		}
+	}
+	words = append(words, string(runes[start:]))
+
+	var lines []string
+	line := ""
+	for _, word := range words {
+		if line != "" && displayWidth(line+word) > maxWidth {
+			lines = append(lines, line)
+			line = ""
+		}
+		line += word
+	}
+	if line != "" {
+		lines = append(lines, line)
+	}
+	return strings.Join(lines, "\\\n")
+}
+
+func joinURL(endpoint, path string) string {
+	if endpoint == "" {
+		return path
+	}
+	return strings.TrimRight(endpoint, "/") + "/" + strings.TrimLeft(path, "/")
+}
+
+func compactJSON(value any) string {
+	if value == nil {
+		return ""
+	}
+	data, err := json.Marshal(value)
+	if err != nil {
+		return fmt.Sprint(value)
+	}
+	return string(data)
+}
+
+func flattenRows(value any) [][]string {
+	var rows [][]string
+	flatten("$", value, &rows)
+	if len(rows) == 0 {
+		return [][]string{{"$", "null"}}
+	}
+	return rows
+}
+
+func flatten(path string, value any, rows *[][]string) {
+	switch typed := value.(type) {
+	case map[string]any:
+		keys := make([]string, 0, len(typed))
+		for key := range typed {
+			keys = append(keys, key)
+		}
+		sort.Strings(keys)
+		for _, key := range keys {
+			flatten(path+"."+key, typed[key], rows)
+		}
+	case []any:
+		for i, item := range typed {
+			flatten(fmt.Sprintf("%s[%d]", path, i), item, rows)
+		}
+	default:
+		*rows = append(*rows, []string{path, fmt.Sprint(typed)})
+	}
+}
+
+func caseInputSummary(caseValue model.Case, requestRef string) []string {
+	keys := make([]string, 0, len(caseValue.Data))
+	for key := range caseValue.Data {
+		if key != "name" && key != "description" {
+			keys = append(keys, key)
+		}
+	}
+	sort.Strings(keys)
+	result := make([]string, 0, len(keys))
+	for _, key := range keys {
+		if isEmptyValue(caseValue.Data[key]) {
+			continue
+		}
+		if key == "requestBody" && requestRef != "" {
+			result = append(result, key+": @"+requestRef)
+			continue
+		}
+		result = append(result, key+": "+compactJSON(caseValue.Data[key]))
+	}
+	return result
+}
+
+func isEmptyValue(value any) bool {
+	if value == nil {
+		return true
+	}
+	switch typed := value.(type) {
+	case string:
+		return typed == ""
+	case map[string]any:
+		return len(typed) == 0
+	case []any:
+		return len(typed) == 0
+	default:
+		return false
+	}
+}
+
+func expectationSummary(expectation map[string]any, expectationRef string) string {
+	if len(expectation) == 0 {
+		return ""
+	}
+	if expectationRef != "" {
+		return "@" + expectationRef
+	}
+	keys := make([]string, 0, len(expectation))
+	for key := range expectation {
+		keys = append(keys, key)
+	}
+	sort.Strings(keys)
+	var result []string
+	for _, key := range keys {
+		result = append(result, key+": "+compactJSON(expectation[key]))
+	}
+	return strings.Join(result, "\\\n")
+}
+
+func firstRequestReference(scenario *model.Scenario) string {
+	for _, step := range scenario.Steps {
+		if step.HTTP != nil && step.HTTP.Body != nil {
+			return label(scenario.ID, "request", step.ID)
+		}
+		if step.GRPC != nil && step.GRPC.Message != nil {
+			return label(scenario.ID, "grpc-request", step.ID)
+		}
+	}
+	return ""
+}
+
+func firstExpectationReference(scenario *model.Scenario) string {
+	for _, step := range scenario.Steps {
+		if step.Test != "" {
+			return label(scenario.ID, "expect", step.ID)
+		}
+	}
+	return ""
+}
+
+func templateCaseReference(value any) bool {
+	text, ok := value.(string)
+	return ok && strings.Contains(text, "vars.case")
+}
+
+func flattenExpectationRows(caseValue model.Case) [][]string {
+	if len(caseValue.Expectation) == 0 {
+		return nil
+	}
+	return flattenRows(caseValue.Expectation)
+}
+
+func label(parts ...string) string {
+	kind := "doc"
+	if len(parts) > 1 {
+		kind = parts[1]
+	}
+	abbreviations := map[string]string{
+		"scenario": "scn", "cases": "case", "request": "req", "grpc-request": "greq",
+		"expect": "exp", "http": "http", "grpc": "grpc", "before": "pre", "after": "post",
+	}
+	if short, ok := abbreviations[kind]; ok {
+		kind = short
+	}
+	hash := fnv.New32a()
+	_, _ = hash.Write([]byte(strings.Join(parts, "\x00")))
+	return fmt.Sprintf("tbl-%s-%08x", kind, hash.Sum32())
+}

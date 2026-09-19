@@ -1,0 +1,11 @@
+# リクエストデータ {#sec-request-json}
+
+リクエストボディを持つシナリオのデータを示す。GET と DELETE の入力はケースデータ一覧のパス・クエリパラメータを参照する。
+
+{{< include ../../generated/post-addpet-suite/request-json.qmd >}}
+
+{{< include ../../generated/put-updatepet-suite/request-json.qmd >}}
+
+{{< include ../../generated/post-updatepetwithform-suite/request-json.qmd >}}
+
+{{< include ../../generated/post-uploadfile-suite/request-json.qmd >}}

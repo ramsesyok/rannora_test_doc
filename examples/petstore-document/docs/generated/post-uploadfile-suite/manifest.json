@@ -1,0 +1,30 @@
+{
+  "generator": "runnora-instructions",
+  "scenario": "ペット画像アップロード",
+  "source": "practice/runbooks/generated/pet/post_uploadFile.suite.yml",
+  "sha256": "b904dd2f708e0d5df7583b3adb9f947d4eccf924681c1bc377e478f4af404ead",
+  "files": [
+    "cases.qmd",
+    "expectations.qmd",
+    "http.qmd",
+    "request-json.qmd",
+    "scenario.qmd"
+  ],
+  "inputs": [
+    {
+      "kind": "runbook",
+      "path": "practice/runbooks/generated/pet/post_uploadFile.suite.yml",
+      "sha256": "b904dd2f708e0d5df7583b3adb9f947d4eccf924681c1bc377e478f4af404ead"
+    },
+    {
+      "kind": "runbook",
+      "path": "practice/runbooks/generated/pet/post_uploadFile.template.yml",
+      "sha256": "e584b425bbc361f005197350723ffc63fe795dd15c2292a5c71b712738c24519"
+    },
+    {
+      "kind": "case",
+      "path": "practice/cases/generated/pet/post_uploadFile/default.json",
+      "sha256": "a4b55310bf198ada45096a5bd080d8afdd413439d19d2f2597f8e456d23d03fd"
+    }
+  ]
+}

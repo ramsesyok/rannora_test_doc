@@ -1,0 +1,17 @@
+# テストシナリオ {#sec-scenarios}
+
+各表の「良否」欄は、試験実施後の判定記録に使用する。
+
+{{< include ../../generated/post-addpet-suite/scenario.qmd >}}
+
+{{< include ../../generated/get-getpetbyid-suite/scenario.qmd >}}
+
+{{< include ../../generated/get-findpetsbystatus-suite/scenario.qmd >}}
+
+{{< include ../../generated/put-updatepet-suite/scenario.qmd >}}
+
+{{< include ../../generated/post-updatepetwithform-suite/scenario.qmd >}}
+
+{{< include ../../generated/post-uploadfile-suite/scenario.qmd >}}
+
+{{< include ../../generated/delete-deletepet-suite/scenario.qmd >}}

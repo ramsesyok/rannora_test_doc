@@ -1,0 +1,17 @@
+# ケースデータ一覧 {#sec-cases}
+
+パスパラメータ、クエリパラメータ、ヘッダーおよびリクエストボディの参照元となるケースを示す。
+
+{{< include ../../generated/post-addpet-suite/cases.qmd >}}
+
+{{< include ../../generated/get-getpetbyid-suite/cases.qmd >}}
+
+{{< include ../../generated/get-findpetsbystatus-suite/cases.qmd >}}
+
+{{< include ../../generated/put-updatepet-suite/cases.qmd >}}
+
+{{< include ../../generated/post-updatepetwithform-suite/cases.qmd >}}
+
+{{< include ../../generated/post-uploadfile-suite/cases.qmd >}}
+
+{{< include ../../generated/delete-deletepet-suite/cases.qmd >}}

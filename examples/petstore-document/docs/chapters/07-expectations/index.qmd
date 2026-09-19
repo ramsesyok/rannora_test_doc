@@ -1,0 +1,17 @@
+# 期待値 {#sec-expectations}
+
+実際のレスポンスは掲載しない。runbook の検証式とケース JSON の期待値を示す。
+
+{{< include ../../generated/post-addpet-suite/expectations.qmd >}}
+
+{{< include ../../generated/get-getpetbyid-suite/expectations.qmd >}}
+
+{{< include ../../generated/get-findpetsbystatus-suite/expectations.qmd >}}
+
+{{< include ../../generated/put-updatepet-suite/expectations.qmd >}}
+
+{{< include ../../generated/post-updatepetwithform-suite/expectations.qmd >}}
+
+{{< include ../../generated/post-uploadfile-suite/expectations.qmd >}}
+
+{{< include ../../generated/delete-deletepet-suite/expectations.qmd >}}

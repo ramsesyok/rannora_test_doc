@@ -1,0 +1,15 @@
+# HTTP 呼び出し情報 {#sec-http}
+
+{{< include ../../generated/post-addpet-suite/http.qmd >}}
+
+{{< include ../../generated/get-getpetbyid-suite/http.qmd >}}
+
+{{< include ../../generated/get-findpetsbystatus-suite/http.qmd >}}
+
+{{< include ../../generated/put-updatepet-suite/http.qmd >}}
+
+{{< include ../../generated/post-updatepetwithform-suite/http.qmd >}}
+
+{{< include ../../generated/post-uploadfile-suite/http.qmd >}}
+
+{{< include ../../generated/delete-deletepet-suite/http.qmd >}}

@@ -1,0 +1,29 @@
+{
+  "generator": "runnora-instructions",
+  "scenario": "ペット削除",
+  "source": "practice/runbooks/generated/pet/delete_deletePet.suite.yml",
+  "sha256": "39e94437a15b6d7114fae0d78f5ef4a65874854c47e7765c686e58e8b935effd",
+  "files": [
+    "cases.qmd",
+    "expectations.qmd",
+    "http.qmd",
+    "scenario.qmd"
+  ],
+  "inputs": [
+    {
+      "kind": "runbook",
+      "path": "practice/runbooks/generated/pet/delete_deletePet.suite.yml",
+      "sha256": "39e94437a15b6d7114fae0d78f5ef4a65874854c47e7765c686e58e8b935effd"
+    },
+    {
+      "kind": "runbook",
+      "path": "practice/runbooks/generated/pet/delete_deletePet.template.yml",
+      "sha256": "e58dff23f8cef02012fca503c551d21ccb684ecc8f2c81bbbf71f875c187acb1"
+    },
+    {
+      "kind": "case",
+      "path": "practice/cases/generated/pet/delete_deletePet/default.json",
+      "sha256": "d024ff4b6a7181f6fd7c3ad0416acb454e573242226dc86d3f4afdf663265138"
+    }
+  ]
+}

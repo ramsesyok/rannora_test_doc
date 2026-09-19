@@ -1,0 +1,30 @@
+{
+  "generator": "runnora-instructions",
+  "scenario": "ペット情報更新",
+  "source": "practice/runbooks/generated/pet/put_updatePet.suite.yml",
+  "sha256": "6c5113c43825012083f65abacaccc0f2788be13f268c396335277a1e5c929215",
+  "files": [
+    "cases.qmd",
+    "expectations.qmd",
+    "http.qmd",
+    "request-json.qmd",
+    "scenario.qmd"
+  ],
+  "inputs": [
+    {
+      "kind": "runbook",
+      "path": "practice/runbooks/generated/pet/put_updatePet.suite.yml",
+      "sha256": "6c5113c43825012083f65abacaccc0f2788be13f268c396335277a1e5c929215"
+    },
+    {
+      "kind": "runbook",
+      "path": "practice/runbooks/generated/pet/put_updatePet.template.yml",
+      "sha256": "87348d32fa55a02dcc4e87a89016b3ad1291fd29a18201e88a97bd095af0b5c8"
+    },
+    {
+      "kind": "case",
+      "path": "practice/cases/generated/pet/put_updatePet/default.json",
+      "sha256": "6ccd9a0f97a1c3a551c0d776d3c3af1cf9a1c7dc44f0a5d8b66e288a3a8e383f"
+    }
+  ]
+}

@@ -1,0 +1,5 @@
+/.verify/
+/.gocache/
+/generated/
+/tmp/
+/*.exe

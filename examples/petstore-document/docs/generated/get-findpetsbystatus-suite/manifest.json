@@ -1,0 +1,29 @@
+{
+  "generator": "runnora-instructions",
+  "scenario": "ステータスによるペット検索",
+  "source": "practice/runbooks/generated/pet/get_findPetsByStatus.suite.yml",
+  "sha256": "d3347e681dd58aadfe6283b04c76eb2da5e80824a1304cd299885fcbb8d05550",
+  "files": [
+    "cases.qmd",
+    "expectations.qmd",
+    "http.qmd",
+    "scenario.qmd"
+  ],
+  "inputs": [
+    {
+      "kind": "runbook",
+      "path": "practice/runbooks/generated/pet/get_findPetsByStatus.suite.yml",
+      "sha256": "d3347e681dd58aadfe6283b04c76eb2da5e80824a1304cd299885fcbb8d05550"
+    },
+    {
+      "kind": "runbook",
+      "path": "practice/runbooks/generated/pet/get_findPetsByStatus.template.yml",
+      "sha256": "55959a79d448590281206a911b2e0dafc739560a18e50f2d14846689a37a78d9"
+    },
+    {
+      "kind": "case",
+      "path": "practice/cases/generated/pet/get_findPetsByStatus/default.json",
+      "sha256": "8b431ca599311698de2c1a93f8eddd64d19df26603133a76ddab9e8006e6c33b"
+    }
+  ]
+}
