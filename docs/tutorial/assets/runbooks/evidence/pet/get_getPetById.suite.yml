@@ -1,0 +1,16 @@
+desc: ペット取得APIの正常系と異常系
+vars:
+  cases:
+    - json://../../../cases/evidence/pet/get_getPetById/normal.json
+    - json://../../../cases/evidence/pet/get_getPetById/not-found.json
+steps:
+  pet_001:
+    include:
+      path: ./get_getPetById.template.yml
+      vars:
+        case: "{{ vars.cases[0] }}"
+  pet_002:
+    include:
+      path: ./get_getPetById.template.yml
+      vars:
+        case: "{{ vars.cases[1] }}"

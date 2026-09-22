@@ -1,0 +1,17 @@
+project:
+  type: book
+  output-dir: _book
+  post-render:
+    - postprocess-html.js
+book:
+  title: ペット取得API テスト手順書（演習）
+  chapters:
+    - index.qmd
+lang: ja
+toc: true
+format:
+  html:
+    css: design-doc.css
+    number-sections: true
+filters:
+  - design-doc.lua

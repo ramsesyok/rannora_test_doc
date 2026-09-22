@@ -1,0 +1,14 @@
+{
+  "name": "PET-002",
+  "description": "存在しないpetId=999を指定すると404と理由を返す",
+  "pathParams": {"petId": 999},
+  "queryParams": {},
+  "headers": {},
+  "requestBody": null,
+  "expect": {
+    "status": 404,
+    "bodyMode": "subset",
+    "body": {"message": "Pet not found"},
+    "ignorePaths": []
+  }
+}

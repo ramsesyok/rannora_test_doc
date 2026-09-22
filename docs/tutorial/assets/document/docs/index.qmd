@@ -1,0 +1,63 @@
+# ペット取得API テスト手順書（演習） {.unnumbered}
+
+## 実施条件
+
+目的は、ペット取得APIの正常系と異常系のテスト定義、および手順書作成の流れを確認することである。
+本演習はWireMockを対象とする。実APIの実装品質を判定する試験は別途、対象API環境で実施する。
+
+| 項目 | 条件 |
+|---|---|
+| 対象 | GET /pet/{petId} |
+| 接続先 | RUNNORA_BASE_URL=http://localhost:18080 |
+| 事前条件 | WireMockが起動済み。100は登録済み、999は未登録として応答を定義済み |
+| DB前処理・後処理 | なし。Oracle接続は使わない |
+| 実行順 | PET-001、PET-002 |
+| 合格条件 | 各ケースのステータスと、共通手順に記載した本文フィールドの検証が成功する |
+| 終了条件 | 両ケースを実施し、結果・不具合番号・証跡の保存先を記録する |
+
+## 実施方法
+
+作業場所は演習用フォルダ `lab` とする。詳細な環境準備はチュートリアルを参照する。
+次を同じPowerShellで実行する。`$runnora` は実行ファイルの絶対パスを設定済みとする。
+
+```powershell
+$env:RUNNORA_BASE_URL = 'http://localhost:18080'
+New-Item -ItemType Directory -Force reports | Out-Null
+$stamp = Get-Date -Format 'yyyyMMdd-HHmmss'
+& $runnora run --config config.yaml --report-format text --report-out "reports/pet-$stamp.txt" runbooks/evidence/pet/get_getPetById.suite.yml
+$runExit = $LASTEXITCODE
+$runExit
+```
+
+終了コード0を確認する。レポートの集計はrunbook単位であり、2ケース分の内訳はsuiteと必要なログで確認する。
+失敗時は原因を修正して再実行し、失敗時と再実行後の証跡を別々に残す。
+
+## テストシナリオ
+
+{{< include generated/get-getpetbyid-suite/scenario.qmd >}}
+
+## ケース一覧
+
+{{< include generated/get-getpetbyid-suite/cases.qmd >}}
+
+## HTTP呼び出し情報
+
+{{< include generated/get-getpetbyid-suite/http.qmd >}}
+
+## 期待値・検証式
+
+{{< include generated/get-getpetbyid-suite/expectations.qmd >}}
+
+## 実施記録
+
+生成時点では未実施である。以下は実施後に記入する欄であり、自動判定結果ではない。
+
+| ケースID | 実施日時・実施者 | 対象環境・版 | 良否 | 証跡・不具合番号 |
+|---|---|---|---|---|
+| PET-001 | 未記入 | 未記入 | 未実施 | 未記入 |
+| PET-002 | 未記入 | 未記入 | 未実施 | 未記入 |
+
+## 終了作業
+
+研修用のWireMockを起動したターミナルで `Ctrl+C` を押し、終了を確認する。
+実API環境の試験では、合意した後処理とデータ復旧を実施して記録する。

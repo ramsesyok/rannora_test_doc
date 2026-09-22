@@ -1,0 +1,14 @@
+{
+  "name": "PET-001",
+  "description": "存在するpetId=100を指定すると200とペット情報を返す",
+  "pathParams": {"petId": 100},
+  "queryParams": {},
+  "headers": {},
+  "requestBody": null,
+  "expect": {
+    "status": 200,
+    "bodyMode": "subset",
+    "body": {"id": 100, "name": "doggie", "status": "available"},
+    "ignorePaths": []
+  }
+}
