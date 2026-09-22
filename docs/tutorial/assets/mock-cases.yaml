@@ -1,0 +1,26 @@
+version: 1
+defaults:
+  response:
+    headers:
+      Content-Type: application/json
+cases:
+  - id: pet_100
+    operationId: getPetById
+    priority: 10
+    request:
+      pathParams:
+        petId:
+          equalTo: "100"
+    response:
+      status: 200
+      bodyFile: getPetById/normal.json
+  - id: pet_999
+    operationId: getPetById
+    priority: 20
+    request:
+      pathParams:
+        petId:
+          equalTo: "999"
+    response:
+      status: 404
+      bodyFile: getPetById/not-found.json

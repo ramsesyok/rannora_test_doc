@@ -1,5 +1,15 @@
 # runnora-instructions
 
+## 新人向けチュートリアル
+
+API単体試験のファイル構成、正常系・異常系の作成、実行、テスト手順書への変換を一通り学べる教材です。
+
+- [導入プレゼンテーション（PowerPoint・14枚）](docs/tutorial/output/runnora-api-testing.pptx)
+- [Step by Step 詳細手順（HTML）](docs/tutorial/output/step-by-step.html)
+- [教材の使い方・完成例](docs/tutorial/README.md)
+
+## このツールについて
+
 runnora 用の runn シナリオを、レビュー用の Quarto `.qmd` 原稿へ変換する Go CLI です。
 生成する表は `design-doc-quarto-template` の `::: {.landscape}` と `::: {.tbl}`、
 Pandoc GridTable を使用し、PDFでは常に横向きページとして組版します。

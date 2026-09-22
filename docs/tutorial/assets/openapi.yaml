@@ -1,0 +1,42 @@
+openapi: 3.0.3
+info:
+  title: 新人研修用 Pet API
+  version: 1.0.0
+servers:
+  - url: http://localhost:18080
+paths:
+  /pet/{petId}:
+    get:
+      tags: [pet]
+      operationId: getPetById
+      summary: IDによるペット取得
+      parameters:
+        - name: petId
+          in: path
+          required: true
+          schema:
+            type: integer
+            example: 100
+      responses:
+        '200':
+          description: ペットが存在する
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [id, name, status]
+                properties:
+                  id: {type: integer}
+                  name: {type: string}
+                  status: {type: string}
+              example: {id: 100, name: doggie, status: available}
+        '404':
+          description: ペットが存在しない
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [message]
+                properties:
+                  message: {type: string}
+              example: {message: Pet not found}

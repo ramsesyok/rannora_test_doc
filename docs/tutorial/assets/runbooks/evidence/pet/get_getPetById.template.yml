@@ -1,0 +1,21 @@
+desc: IDを指定してペットを取得する共通手順
+runners:
+  req:
+    endpoint: ${RUNNORA_BASE_URL}
+vars:
+  case: {}
+steps:
+  call_api:
+    desc: ペットを取得し、HTTPステータスと対象フィールドを検証する
+    req:
+      /pet/{{ vars.case.pathParams.petId }}:
+        get:
+          headers: "{{ vars.case.headers }}"
+    test: |
+      current.res.status == vars.case.expect.status &&
+      (vars.case.expect.status != 200 ||
+        (current.res.body.id == vars.case.expect.body.id &&
+         current.res.body.name == vars.case.expect.body.name &&
+         current.res.body.status == vars.case.expect.body.status)) &&
+      (vars.case.expect.status != 404 ||
+        current.res.body.message == vars.case.expect.body.message)

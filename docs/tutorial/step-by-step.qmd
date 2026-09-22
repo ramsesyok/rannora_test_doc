@@ -1,0 +1,531 @@
+---
+title: "runnora API単体試験チュートリアル"
+subtitle: "テストファイルの読み方からテスト手順書の作成まで"
+lang: ja
+toc: true
+toc-depth: 2
+number-sections: false
+format:
+  html:
+    embed-resources: true
+    code-copy: true
+    toc-location: left
+    theme: cosmo
+    css: tutorial.css
+---
+
+## このチュートリアルのゴール
+
+新人が「どのファイルを直すか」を判断し、API試験を実行し、他の人が再現できるテスト手順書を作れるようになることが目標です。導入スライドを読んだ後、この手順を上から実施してください。演習の目安は60〜90分です。
+
+題材は **GET /pet/{petId}** です。正常系（200）と異常系（404）の2ケースを扱います。まずWireMockというモックサーバーを使って、テストの書き方と手順書作成を練習します。この結果はモックに対する結果です。実APIの単体試験では、対象API、依存先のモック範囲、DB状態をチームで決めた試験環境に置き換えます。
+
+完成するものは、実行可能なsuite・template・case JSON、実行レポート、そしてHTMLのテスト手順書です。手順書の目的・環境・結果記録は人が書き、呼び出し手順・ケース・検証式はテストファイルから生成します。
+
+### 進め方
+
+1. Step 0〜2：環境を準備し、生成したファイルを読む。
+2. Step 3〜5：試験観点を決め、ケースと検証式を書く。
+3. Step 6〜8：モックを準備し、成功・失敗の両方を確認する。
+4. Step 9〜11：原稿を生成し、手順書として仕上げ、レビューする。
+
+各Stepの「確認できたら次へ」が、その場で確認する到達点です。コマンドがエラーになったら、後続へ進む前に末尾のトラブルシュートを参照してください。
+
+## ファイルの役割を先に知る
+
+| ファイル | 何を書くか | 主な作成・更新方法 |
+|---|---|---|
+| `openapi.yaml` | APIのURL、引数、レスポンスなどの契約 | API設計者が管理。演習では同梱版を使用 |
+| `config.yaml` | runnoraの設定、Oracle接続、SQLフック | `runnora init` 後に環境に合わせる |
+| `*.template.yml` | APIを呼ぶ共通手順と `test` の検証式 | `runnora generate` を起点に育てる |
+| `cases/.../*.json` | ケース名、入力値、期待値 | 試験観点に合わせて人が作成 |
+| `*.suite.yml` | case JSONの一覧、繰り返し、templateの呼び出し | ケースを増やしたら参照一覧も更新 |
+| `mock-cases.yaml` | どのリクエストに何を返すか | モック用の条件を人が設定 |
+| `mock-responses/*.json` | モックが返す本文 | モックの応答データとして作成 |
+| `wiremock-out/` | WireMockが読み込むmappingと本文 | `runnora genmock build` で生成 |
+| `sql/*.sql` | DBの準備・片付け | DBが必要な試験のみ。今回の基礎演習では使わない |
+| `reports/` | 実行結果のレポート、ログ | `runnora run` で保存 |
+| `document/docs/generated/` | 試験内容を説明する `.qmd` 原稿 | `runnora-instructions generate` で生成 |
+| `document/docs/index.qmd` | 実施条件、実行方法、生成原稿の差し込み、結果欄 | 人が編集 |
+| `document/docs/_quarto.yml` | 文書の表題、構成、出力形式 | 文書担当者が管理 |
+
+**suiteがcase JSONを読み、1件ずつtemplateへ渡します。templateがAPIを呼び、test式で期待値と比較します。** case JSONは実行結果ではありません。また、mock-responsesのJSONは応答側のデータであり、case JSONは送信側の入力・期待値です。
+
+2つの `generate` を混同しないでください。
+
+| 実行するツール | 入力 | 出力 |
+|---|---|---|
+| `runnora generate` | OpenAPI | テスト用YAMLとcase JSONの雛形 |
+| `runnora-instructions generate` | suite、template、case JSONなど | 手順書用の分割 `.qmd` 原稿 |
+| `quarto render` | `.qmd` と文書設定 | 閲覧用HTML |
+
+## Step 0　環境と作業フォルダの準備
+
+### 必要なもの
+
+この手順は **WindowsのPowerShell** 用です。VS Codeなどのテキストエディターを使い、YAMLはスペースで字下げして、ファイルをUTF-8で保存してください。タブによる字下げは使いません。
+
+| 道具 | 用途 | 確認方法 |
+|---|---|---|
+| runnora | テスト資産生成、モック生成、試験実行 | `& $runnora version` と各サブコマンドの `--help` |
+| Go | 手順書変換CLIのビルド | `go version`。このリポジトリのgo.modは1.26.4を指定 |
+| Java 17 | この演習のWireMock起動 | `java -version` |
+| WireMock standalone 3.13.2 | モックサーバー | チーム配布のjarを準備 |
+| Quarto | HTML作成 | `quarto --version` |
+
+未導入ならチーム標準の配布方法で準備してください。この手順はインストーラーのダウンロードを行いません。runnoraの配布物には `generate` と `genmock` が必要です。変換CLIの実行ファイルを配布済みの場合、Goによるビルドは省略できます。
+
+### パスを設定する
+
+PowerShellを開き、次の3行を自分の配置先に合わせます。例は3つのリポジトリが `C:\Users\ramse\Projects` にある環境です。以降、同じPowerShellを使ってください。新しいターミナルでは変数を再設定する必要があります。
+
+```powershell
+$repo = 'C:\Users\ramse\Projects\runnora_test_iInstructions'
+$runnoraRepo = 'C:\Users\ramse\Projects\runnora'
+$runnora = Join-Path $runnoraRepo 'runnora.exe'
+$wiremockJar = Join-Path $runnoraRepo 'docs\tools\wiremock-standalone-3.13.2.jar'
+$assets = Join-Path $repo 'docs\tutorial\assets'
+$lab = Join-Path $repo 'tmp\my-first-api-test'
+$docgen = Join-Path $repo 'tmp\runnora-instructions.exe'
+
+Test-Path $runnora
+Test-Path $wiremockJar
+& $runnora version
+go version
+java -version
+quarto --version
+```
+
+`Test-Path` は2つとも `True` になることを確認します。`tmp/` はこのリポジトリのGit管理対象外です。演習後、業務で使う資産はチームの管理先へ移してください。
+
+### 作業領域と変換CLIを作る
+
+```powershell
+Set-Location $repo
+if (Test-Path $lab) { throw '演習先が存在します。別名の$labを設定してください。' }
+New-Item -ItemType Directory -Force $lab | Out-Null
+go build -buildvcs=false -o $docgen .
+if ($LASTEXITCODE -ne 0) { throw '変換CLIのビルドに失敗しました' }
+Copy-Item "$assets\openapi.yaml" "$lab\openapi.yaml"
+Set-Location $lab
+& $runnora init --out config.yaml
+if ($LASTEXITCODE -ne 0) { throw 'config生成に失敗しました' }
+```
+
+`-buildvcs=false` は埋め込みのGit版情報を省略するビルド指定です。初回ビルドでGo依存ライブラリが未取得なら、ネットワーク接続またはチーム配布の実行ファイルが必要です。
+
+`config.yaml` を開き、`oracle.dsn` が空文字、`hooks.common.before` と `after` が空配列であることを確認します。今回、Oracleは不要です。HTTP接続先は後述の `RUNNORA_BASE_URL` で設定します。
+
+**確認できたら次へ：** `lab` に `openapi.yaml` と `config.yaml` があり、変換CLIをビルドできた。
+
+## Step 1　API仕様と試験観点の確認
+
+`openapi.yaml` をエディターで開きます。`operationId: getPetById` が処理の識別名、`/pet/{petId}` がパス、`get` がHTTPメソッドです。`petId` はパスに埋める整数です。
+
+本演習では次を試験条件として採用します。100と999の登録状態はOpenAPIだけからは決まりません。ここではモックのデータとして設定します。
+
+| ケースID | 観点 | 入力 | 期待ステータス | 本文で確認するもの |
+|---|---|---|---|---|
+| PET-001 | 存在するID | petId=100 | 200 | id=100、name=doggie、status=available |
+| PET-002 | 存在しないID | petId=999 | 404 | message=Pet not found |
+
+404はこのケースでは正しい応答です。HTTPが404でも、期待値が404なら試験は成功します。
+
+実業務では、認証、必須項目、境界値、権限、DB更新、依存APIの異常なども仕様に照らして追加します。この2ケースだけで網羅したとは判断しません。
+
+**確認できたら次へ：** 各ケースで「何を送るか」「なぜその結果になるか」を説明できる。
+
+## Step 2　テストの雛形を生成して読む
+
+作業場所：`$lab`。
+
+```powershell
+& $runnora generate --openapi openapi.yaml --out . --operation-ids getPetById
+if ($LASTEXITCODE -ne 0) { throw 'テスト雛形の生成に失敗しました' }
+Get-ChildItem runbooks,cases -Recurse -File
+```
+
+1 operation、1 template、1 suite、1 caseが生成されます。
+
+```text
+runbooks/generated/pet/get_getPetById.template.yml
+runbooks/generated/pet/get_getPetById.suite.yml
+cases/generated/pet/get_getPetById/default.json
+```
+
+templateでは、`runners.req.endpoint` が `${RUNNORA_BASE_URL}` を参照し、`steps.call_api.req` にGETリクエストが書かれています。`vars.case.pathParams.petId` がcase JSONの値です。
+
+suiteでは、`vars.cases` がcaseファイル一覧、`loop.count` が件数、`include.path` が呼び出すtemplateを表します。`vars.cases[i]` の `i` は繰り返し中の位置です。
+
+**重要：生成直後のtest式が検証するのはステータスです。** `expect.body`、`bodyMode`、`ignorePaths` をcase JSONに書くだけでは、本文の自動比較が有効になるわけではありません。Step 5で具体的な検証式を追加します。
+
+**確認できたら次へ：** 3つのファイルを開き、suiteからtemplateとcase JSONへの参照をたどれる。
+
+## Step 3　手で育てるファイルを分ける
+
+作業場所：`$lab`。再生成用の `generated` と、業務の試験内容として編集する `evidence` を分けます。`evidence` はここで採用するフォルダ名で、自動的に保護する特別な機能ではありません。
+
+```powershell
+New-Item -ItemType Directory -Force runbooks/evidence/pet,cases/evidence/pet/get_getPetById | Out-Null
+Copy-Item runbooks/generated/pet/get_getPetById.template.yml runbooks/evidence/pet/
+Copy-Item runbooks/generated/pet/get_getPetById.suite.yml runbooks/evidence/pet/
+Copy-Item cases/generated/pet/get_getPetById/default.json cases/evidence/pet/get_getPetById/normal.json
+```
+
+これから編集するのは `evidence` 内のファイルです。`--force` は既存ファイルを上書きし、`--clean` は生成領域を掃除する操作なので、差分を確認せずに使わないでください。本演習の初回実行には不要です。
+
+**確認できたら次へ：** `generated` と `evidence` の両方にファイルがある。
+
+## Step 4　case JSONとsuiteを編集する
+
+### 正常系を作る
+
+`cases/evidence/pet/get_getPetById/normal.json` を次の内容に置き換えます。
+
+```json
+{
+  "name": "PET-001",
+  "description": "存在するpetId=100を指定すると200とペット情報を返す",
+  "pathParams": {"petId": 100},
+  "queryParams": {},
+  "headers": {},
+  "requestBody": null,
+  "expect": {
+    "status": 200,
+    "bodyMode": "subset",
+    "body": {"id": 100, "name": "doggie", "status": "available"},
+    "ignorePaths": []
+  }
+}
+```
+
+`pathParams` はURLのパス、`queryParams` は検索条件、`headers` はヘッダーです。今回のGETではリクエスト本文を送らないので `requestBody` は `null` にします。`name` を追跡用のケースIDとして使い、`description` に目的を書きます。
+
+### 異常系を作る
+
+同じフォルダに `not-found.json` を新規作成します。
+
+```json
+{
+  "name": "PET-002",
+  "description": "存在しないpetId=999を指定すると404と理由を返す",
+  "pathParams": {"petId": 999},
+  "queryParams": {},
+  "headers": {},
+  "requestBody": null,
+  "expect": {
+    "status": 404,
+    "bodyMode": "subset",
+    "body": {"message": "Pet not found"},
+    "ignorePaths": []
+  }
+}
+```
+
+### suiteに2件を登録する
+
+`runbooks/evidence/pet/get_getPetById.suite.yml` 全体を次で置き換えます。
+
+```yaml
+desc: ペット取得APIの正常系と異常系
+vars:
+  cases:
+    - json://../../../cases/evidence/pet/get_getPetById/normal.json
+    - json://../../../cases/evidence/pet/get_getPetById/not-found.json
+steps:
+  pet_001:
+    include:
+      path: ./get_getPetById.template.yml
+      vars:
+        case: "{{ vars.cases[0] }}"
+  pet_002:
+    include:
+      path: ./get_getPetById.template.yml
+      vars:
+        case: "{{ vars.cases[1] }}"
+```
+
+相対パスはsuiteの置き場所を基準に読みます。`runbooks/evidence/pet` から3つ上へ戻ると `$lab` なので、`../../../cases/evidence/...` になります。`json://` はrunnがJSONファイルを読むための指定です。WindowsでもYAML内の区切りは `/` にそろえます。
+
+この演習では各ケースを独立したincludeステップにしています。`vars.cases[0]` は1件目、`[1]` は2件目です。確認した実行ファイルでは、生成されたloop形式で先行ケースだけを失敗させても、最後のケースが成功すると終了コード0になる挙動がありました。失敗を見落とさないよう、演習では上の形式を使います。最初のステップが失敗した場合、後続は実施されないことがあるため、修正後に全体を再実行します。
+
+caseファイルを増やすだけでは実行されません。必ずsuiteの一覧と、対応するincludeステップの両方を追加します。
+
+```powershell
+Get-Content cases/evidence/pet/get_getPetById/normal.json -Raw | ConvertFrom-Json
+Get-Content cases/evidence/pet/get_getPetById/not-found.json -Raw | ConvertFrom-Json
+```
+
+**確認できたら次へ：** JSONの構文エラーがなく、suiteの参照先が2件とも実在する。
+
+## Step 5　レスポンス本文の検証式を追加する
+
+`runbooks/evidence/pet/get_getPetById.template.yml` 全体を次で置き換えます。
+
+```yaml
+desc: IDを指定してペットを取得する共通手順
+runners:
+  req:
+    endpoint: ${RUNNORA_BASE_URL}
+vars:
+  case: {}
+steps:
+  call_api:
+    desc: ペットを取得し、HTTPステータスと対象フィールドを検証する
+    req:
+      /pet/{{ vars.case.pathParams.petId }}:
+        get:
+          headers: "{{ vars.case.headers }}"
+    test: |
+      current.res.status == vars.case.expect.status &&
+      (vars.case.expect.status != 200 ||
+        (current.res.body.id == vars.case.expect.body.id &&
+         current.res.body.name == vars.case.expect.body.name &&
+         current.res.body.status == vars.case.expect.body.status)) &&
+      (vars.case.expect.status != 404 ||
+        current.res.body.message == vars.case.expect.body.message)
+```
+
+`current.res` が受信したレスポンスです。`&&` は「両方を満たす」、`||` は「どちらかを満たす」です。200を期待するケースではid・name・statusを確認し、404を期待するケースではmessageを確認します。この式は今回の200/404の2ケース向けです。別のステータスを追加する際は、必要な本文検証も追加してください。
+
+比較するのは式に書いたフィールドだけです。余分なフィールドの禁止、本文全体の完全一致、OpenAPIの全制約を検証しているわけではありません。`bodyMode` の文字列が式を自動変更することもありません。
+
+`desc` は手順書にも現れる説明です。「call_api」だけに頼らず、何を行い、何を確認するかを日本語で書きます。
+
+入力例の完成版は教材の `assets/runbooks` と `assets/cases` にあります。詰まったら自分の編集内容と比較してください。
+
+**確認できたら次へ：** 各期待値がtest式のどこで比較されるかを指し示せる。
+
+## Step 6　モックを準備する
+
+作業場所：`$lab`。まず同梱のモック定義をコピーします。
+
+```powershell
+Copy-Item "$assets\mock-cases.yaml" .
+Copy-Item "$assets\mock-responses" . -Recurse
+```
+
+`mock-cases.yaml` を開きます。`pet_100` は `petId` が文字列 `"100"` に一致したら200と `getPetById/normal.json` を返し、`pet_999` は `"999"` に一致したら404と `getPetById/not-found.json` を返します。`bodyFile` は `mock-responses` からの相対パスです。
+
+case JSONの数値 `100` はURLでは文字として送られるため、モックの `equalTo: "100"` と対応します。モックのcase IDと試験のcase IDは別の識別子です。
+
+```powershell
+& $runnora genmock validate --openapi openapi.yaml --cases mock-cases.yaml --responses-root mock-responses --fail-on-missing-operation --fail-on-missing-body-file
+if ($LASTEXITCODE -ne 0) { throw 'モック定義を見直してください' }
+& $runnora genmock build --openapi openapi.yaml --cases mock-cases.yaml --responses-root mock-responses --out wiremock-out --no-auto-fallback --fail-on-missing-operation --fail-on-missing-body-file
+if ($LASTEXITCODE -ne 0) { throw 'モック生成に失敗しました' }
+```
+
+`generated 2 mappings, 0 fallbacks` が目安です。今回は `--no-auto-fallback` を指定し、明示した条件だけを使います。モックが返した404だけではPET-002成功の証明になりません。`message` も比較することで、条件不一致によるWireMockの404と区別します。
+
+### 別のPowerShellでWireMockを起動する
+
+次の2つの絶対パスを自分の環境に合わせてください。このターミナルは起動したままにします。
+
+```powershell
+java -jar 'C:\Users\ramse\Projects\runnora\docs\tools\wiremock-standalone-3.13.2.jar' --root-dir 'C:\Users\ramse\Projects\runnora_test_iInstructions\tmp\my-first-api-test\wiremock-out' --port 18080 --bind-address 127.0.0.1
+```
+
+元のPowerShellで応答を確認します。
+
+```powershell
+Invoke-RestMethod http://localhost:18080/pet/100
+```
+
+idが100、nameがdoggie、statusがavailableなら準備完了です。ポートが使用中なら、起動時の番号と以降のURLを同じ空きポートへ変更します。
+
+**確認できたら次へ：** モックが起動し、`/pet/100` から期待したJSONが返る。
+
+## Step 7　試験を実行して結果を保存する
+
+作業場所：元のPowerShellの `$lab`。
+
+```powershell
+$env:RUNNORA_BASE_URL = 'http://localhost:18080'
+New-Item -ItemType Directory -Force reports | Out-Null
+$stamp = Get-Date -Format 'yyyyMMdd-HHmmss'
+& $runnora run --config config.yaml --report-format text --report-out "reports/pet-$stamp.txt" runbooks/evidence/pet/get_getPetById.suite.yml
+$runExit = $LASTEXITCODE
+$runExit
+Get-Content "reports/pet-$stamp.txt"
+```
+
+**終了コード0が全成功**です。終了コードはコマンド直後に保存します。別の外部コマンドを実行すると `$LASTEXITCODE` が更新されることがあります。
+
+レポートの集計単位はrunbookです。1 suiteに2ケースを入れた場合、上位の成功件数が1と表示されても「1ケースしか実行していない」とは限りません。今回のように独立したincludeステップを使い、失敗を無視する設定がないsuiteで、最後まで成功したことを確認します。成功時の表示は `Runbooks: 1, Passed: 1, Failed: 0` です。
+
+テキストレポートは実レスポンス本文すべてを保存する証跡ではありません。ケース別の証跡が必要な実業務では、ケースごとのsuiteに分けて別ファイルへ出力するなど、チームの記録方法に合わせます。実レスポンスを保存する場合はAPI側ログなど別の記録方法も準備します。トークンや個人情報を配布資料へ載せないでください。
+
+確認した実装では `--report-format json` / `junit` を指定してもテキスト形式で出力されます。この教材では明示的に `text` と `.txt` を使います。
+
+**確認できたら次へ：** 200と404を期待する両ケースが成功し、レポートを保存できた。
+
+## Step 8　検証が失敗を検出することを確認する
+
+本文検証が働いているか、意図的に期待値を1箇所だけ変えます。
+
+1. `normal.json` の `expect.body.name` を `doggie` から `wrong-name` に変更して保存します。モック側は変えません。
+2. Step 7の実行を新しい `$stamp` で繰り返します。
+3. 終了コードが1になり、`pet_001` の本文比較で失敗したことをレポートで確認します。
+4. `normal.json` の値を `doggie` に戻します。
+5. もう一度新しい `$stamp` で実行し、終了コード0を確認します。
+
+ステータスが200であっても、本文が違えば失敗することが分かります。失敗時に期待値を根拠なく実測値に合わせるのではなく、API仕様・テスト定義・環境のどこが違うかを調べて修正します。
+
+**確認できたら次へ：** 意図的な失敗と、値を戻した後の成功を両方確認した。
+
+## Step 9　テストファイルから手順書原稿を生成する
+
+作業場所：`$lab`。文書の雛形をコピーし、このリポジトリで使用している表示用機構をコピーします。
+
+```powershell
+Copy-Item "$assets\document" . -Recurse
+$templateDocs = Join-Path $repo 'examples\petstore-document\docs'
+foreach ($file in @('design-doc.lua','design-doc.css','postprocess-html.js')) {
+  Copy-Item (Join-Path $templateDocs $file) document/docs/
+}
+& $docgen generate --base-dir $lab --config config.yaml --out document/docs/generated runbooks/evidence/pet/get_getPetById.suite.yml
+if ($LASTEXITCODE -ne 0) { throw '手順書原稿の生成に失敗しました' }
+Get-ChildItem document/docs/generated/get-getpetbyid-suite
+```
+
+この操作はAPIへリクエストを送りません。入力資産を読み、試験内容を原稿に変換します。テストが成功したことや、実測レスポンスを生成物から判断することはできません。
+
+この演習では以下の5ファイルができます。
+
+| ファイル | 内容 | レビュー時に見る点 |
+|---|---|---|
+| `scenario.qmd` | 共通手順、期待ステータス、詳細表への参照 | 手順の説明と順序が正しいか |
+| `cases.qmd` | ケース一覧、入力、期待値への参照 | PET-001とPET-002が含まれるか |
+| `http.qmd` | メソッド、URL、ヘッダー等 | GETとpetIdの対応が正しいか |
+| `expectations.qmd` | 期待値と検証式 | 本文の比較まで追えるか |
+| `manifest.json` | 入力元やハッシュ、生成ファイル一覧 | どの資産から作ったか追えるか |
+
+GETの本文がないため、この演習では `request-json.qmd` は生成されません。JSON本文を送る試験では必要に応じて生成されます。前後処理やgRPCも入力に応じて別原稿になります。存在しない原稿をincludeしないでください。
+
+`--base-dir` はconfig・追加SQLなどの相対パスや記録する入力元パスの基準です。カレントディレクトリを切り替える指定ではありません。suite自体のパスと `--out` は、実行している作業場所を意識して指定します。
+
+**確認できたら次へ：** 5ファイルがあり、生成時の警告があれば内容を確認した。
+
+## Step 10　手順書にまとめ、HTMLで確認する
+
+`document/docs/index.qmd` を開きます。同梱の雛形には、実施条件、実行コマンド、生成原稿を差し込む指定、実施記録欄、終了作業が入っています。
+
+```markdown
+## テストシナリオ
+
+{{{< include generated/get-getpetbyid-suite/scenario.qmd >}}}
+
+## ケース一覧
+
+{{{< include generated/get-getpetbyid-suite/cases.qmd >}}}
+```
+
+上の表示例はQuartoのinclude記法です。実ファイルでは中括弧を左右 **2つずつ** にします。同梱の `index.qmd` に正しい記法が入っているので、そのまま使えます。includeのパスは、差し込み元の章ファイルから見た相対パスです。たとえば `chapters/03-scenarios/index.qmd` に置くなら `../../generated/...` となります。
+
+### 人が補う情報
+
+実施環境、APIの版、試験データの準備方法、認証方法、合格条件、片付け方、証跡保存先を確認します。自動生成された呼び出し情報だけでは、他の人が環境を再現できません。
+
+同梱の実施記録は「未実施」です。自分で試験した後に実施日時・実施者・対象環境と版・良否・証跡・不具合番号を記入します。テキストレポートから自動で結果欄へ転記する機能はありません。
+
+### HTMLを作る
+
+```powershell
+Push-Location document/docs
+quarto render --to html
+if ($LASTEXITCODE -ne 0) { Pop-Location; throw 'HTML生成に失敗しました' }
+Pop-Location
+Start-Process (Resolve-Path document/docs/_book/index.html).Path
+```
+
+ブラウザーで、ケース表、HTTP情報、期待値、表への参照を確認します。単体のHTMLファイルとして開く場合、全文検索などの一部機能は使えません。更新しながら読む場合は `document/docs` 内で `quarto preview` を実行します。停止は `Ctrl+C` です。
+
+この教材の文書雛形はHTML確認用です。PDF発行には、チームの `design-doc-quarto-template` / ddqで準備した発行用プロジェクトへ原稿を組み込んでください。`_quarto-publish.yml` やTypstの機構がない雛形に、単にPDF指定を追加しても所定様式にはなりません。横向きページ・改ページ・外枠は発行されたPDFで確認します。
+
+**確認できたら次へ：** 他の人が手順書を読んで、接続先・実行対象・合格条件・結果の記録先を判断できる。
+
+## Step 11　レビューと変更後の更新
+
+提出前に以下を確認します。
+
+- [ ] API仕様の版と、対象環境が分かる。
+- [ ] ケースの目的、入力値、期待値が対応する。
+- [ ] 期待値を書いただけの項目を「検証済み」としていない。
+- [ ] suiteに実行したいケースがすべて登録されている。
+- [ ] 前提データ、起動方法、コマンドの作業場所が分かる。
+- [ ] 本文の検証が失敗を検出することを確認した。
+- [ ] 生成原稿の相互参照が解決し、空欄や警告を説明できる。
+- [ ] モック試験と実API試験の結果を区別した。
+- [ ] 実施者、実施日時、対象版、証跡、不具合番号を記録した。
+- [ ] WireMockを起動したターミナルで `Ctrl+C` を押して終了した。
+
+変更が入ったら、まず `evidence` 側のcase JSONやtemplateを修正し、再実行します。その後、同じ入力から原稿を再生成してHTMLを更新します。
+
+```powershell
+# 作業場所は $lab。先にテストを再実行して結果を確認する
+& $docgen generate --base-dir $lab --config config.yaml --out document/docs/generated --force runbooks/evidence/pet/get_getPetById.suite.yml
+if ($LASTEXITCODE -ne 0) { throw '原稿の再生成に失敗しました' }
+Push-Location document/docs
+quarto render --to html
+Pop-Location
+```
+
+`--force` は `generated` 内の既存原稿を上書きします。生成原稿を直接編集すると再生成で失うため、手書きの補足は `index.qmd` などに残します。変換CLIは章構成や `_quarto.yml` を更新しません。不要になった古い断片が残る場合もあるので、manifestとincludeを点検します。
+
+## 応用：SQL、POST、gRPCを扱うとき
+
+### SQLでデータを準備する試験
+
+SQL/PLSQLフックを使う場合は、実行時と文書生成時に **同じconfigとSQL** を渡します。以下は応用の形だけを示す例であり、基礎演習にはSQLファイルやOracle環境を含めていません。
+
+```powershell
+& $runnora run --config config.yaml --before-sql sql/setup.sql --after-sql sql/cleanup.sql runbooks/evidence/pet/get_getPetById.suite.yml
+& $docgen generate --base-dir $lab --config config.yaml --before-sql sql/setup.sql --after-sql sql/cleanup.sql --out document/docs/generated --force runbooks/evidence/pet/get_getPetById.suite.yml
+```
+
+前処理はconfigの `hooks.common.before`、コマンド指定のbefore-sqlの順です。後処理はコマンド指定のafter-sql、configの `hooks.common.after` の順です。runnoraはrunnのrunbook前後のフックとして登録します。suite内の各ケースごとに準備・片付けされると決めつけず、includeを含む実際の実行単位とデータ状態を確認してください。
+
+文書生成はSQLを実行しません。SQLの処理順・内容を原稿化します。生成された前後処理原稿をmanifestから確認して文書に差し込み、環境条件と復旧方法を補います。Oracle用設定とrunbook内のDB runnerは別設定です。
+
+### POSTなど、リクエスト本文がある試験
+
+`requestBody` に送信値を書き、templateがそれを送信していることを確認します。生成された `request-json.qmd` も手順書へ差し込みます。入力値の記載、送信、検証の3点がつながっていることを確認してください。
+
+### gRPCの試験
+
+変換ツールはUnaryとServer streamingを対象とします。RPC種別を確定するため、ローカルの `.proto` を `--proto` で渡します。Client streamingと双方向streamingはこの変換ツールの対象外です。HTTPステータス200とgRPCステータス0を混同しないようにします。
+
+## トラブルシュート
+
+| 症状 | 確認する箇所・対処 |
+|---|---|
+| `unknown command` | 使用した実行ファイルを確認。`generate` がどちらのツールかも確認 |
+| YAML解析エラー | タブ、字下げ、引用符を確認。完成版のassetsと比較 |
+| JSON解析エラー | 最後のカンマ、引用符を確認。`ConvertFrom-Json` で読む |
+| case JSONが見つからない | suiteを移動した際の相対パスと `generated/evidence` を確認 |
+| `vars.case` の値がない | templateを直接実行せず、caseを渡すsuiteを実行 |
+| 接続拒否 | モック起動、18080番ポート、実行側の環境変数を確認 |
+| 未定義の404が返る | petIdとモックmatcher、bodyFileを確認。messageの検証も読む |
+| モック変更が反映されない | genmock buildで再生成し、WireMockを停止して起動し直す |
+| bodyを変えても成功する | templateのtest式でその項目を比較しているか確認 |
+| レポートが1件しかない | runbook単位の集計か確認。ケース数と同じとは限らない |
+| 原稿が既に存在すると出る | 元の入力と出力先を確認し、更新する場合のみ `--force` |
+| include先がない | 生成されたファイル名、章ファイルからの相対パスを確認 |
+| 表への参照が未解決 | 詳細原稿のinclude漏れ、同一断片の重複includeを確認 |
+| HTMLが崩れる | `design-doc.lua` とCSS、post-renderファイルがそろっているか確認 |
+| 生成したのに結果欄が空 | 正常な動作。生成は試験実行・結果転記を行わない |
+
+## 用語と参照元
+
+runbookはrunnが読み込むYAML形式の実行手順です。本書では、共通処理をtemplate、ケースをまとめる入口をsuiteと呼びます。caseは1組の入力と期待値、モックは決めた条件で応答を返す代役、QMDはQuartoのMarkdown原稿です。
+
+本資料は2026-09-22に作業環境のソース・同梱例を確認して作成しました。対象はrunnoraのコミット `a0faaa9`、変換ツールのコミット `85963d5` を基にした作業ツリーです。手元のrunnora実行ファイルは `dev (commit: unknown, built: unknown)` 表示のため、コミットとの一致は保証されません。研修時は配布した実行ファイルの版も記録してください。
+
+主な参照箇所：
+
+- runnora：`README.md`、`docs/tutorial/openapi-generate-runbook.md`、`docs/tutorial/openapi-generate-mock.md`、`internal/generate/emitter.go`、`cmd/run.go`
+- 変換ツール：`README.md`、`cmd/generate.go`、`internal/source/loader.go`、`internal/generator/generator.go`
+- 文書化の実例：`examples/petstore-document/docs/_quarto.yml`、`chapters/03-scenarios/index.qmd`
+
+実業務への持ち帰りでは、API仕様、試験観点、テスト資産、手順書原稿、試験結果を同じ変更単位で追跡できるように管理してください。
