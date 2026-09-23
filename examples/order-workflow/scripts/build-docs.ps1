@@ -13,7 +13,7 @@ $repo = (Resolve-Path (Join-Path $sample '..\..')).Path
 Push-Location $repo
 try {
     New-Item -ItemType Directory -Force "$sample/bin" | Out-Null
-    go build -o "$sample/bin/runnora-instructions.exe" .
+    go build -o "$sample/bin/runnora-docgen.exe" .
     if ($LASTEXITCODE -ne 0) { throw 'Document generator build failed' }
 } finally {
     Pop-Location
@@ -23,7 +23,7 @@ try {
     # Baseline generation shows what OpenAPI alone produces, before workflow authoring.
     & $Runnora generate --config config.yaml --openapi openapi.yaml --out baseline --tags inventory,orders --server http://127.0.0.1:18081 --emit-response-example --force
     if ($LASTEXITCODE -ne 0) { throw 'OpenAPI baseline generation failed' }
-    & ./bin/runnora-instructions.exe generate --base-dir . --config config.yaml --out docs/generated --force runbooks/order-lifecycle.yml runbooks/insufficient-stock.yml runbooks/double-cancel.yml runbooks/stock-recovery.yml runbooks/invalid-recovery.yml
+    & ./bin/runnora-docgen.exe generate --base-dir . --config config.yaml --out docs/generated --force runbooks/order-lifecycle.yml runbooks/insufficient-stock.yml runbooks/double-cancel.yml runbooks/stock-recovery.yml runbooks/invalid-recovery.yml
     if ($LASTEXITCODE -ne 0) { throw 'QMD generation failed' }
     # ddq owns its mechanism files. Explicitly update when changing ddq versions.
     if ($UpdateTemplate -or -not (Test-Path -LiteralPath 'docs/.template-version')) {

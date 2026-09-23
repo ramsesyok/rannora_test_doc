@@ -1,5 +1,5 @@
 {
-  "generator": "runnora-instructions",
+  "generator": "runnora-docgen",
   "scenario": "ペット削除",
   "source": "practice/runbooks/generated/pet/delete_deletePet.suite.yml",
   "sha256": "39e94437a15b6d7114fae0d78f5ef4a65874854c47e7765c686e58e8b935effd",

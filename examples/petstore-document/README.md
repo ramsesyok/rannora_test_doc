@@ -51,10 +51,10 @@ design-doc-quarto-template の CLI を使う場合は、リポジトリのルー
 ddq html docs
 ```
 
-生成済み断片を更新する場合は、`runnora_test_iInstructions` のルートで次の形式を使用する。
+生成済み断片を更新する場合は、`runnora-docgen` のルートで次の形式を使用する。
 
 ```powershell
-.\runnora-instructions.exe generate <Petstoreのsuite.yml...> --base-dir <runnoraのルート> --out examples\petstore-document\docs\generated --force
+.\runnora-docgen.exe generate <Petstoreのsuite.yml...> --base-dir <runnoraのルート> --out examples\petstore-document\docs\generated --force
 ```
 
 `docs/_book/index.html` に静的な HTML 一式が出る（`_book/` は

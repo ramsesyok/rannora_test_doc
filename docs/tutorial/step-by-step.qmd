@@ -45,7 +45,7 @@ format:
 | `wiremock-out/` | WireMockが読み込むmappingと本文 | `runnora genmock build` で生成 |
 | `sql/*.sql` | DBの準備・片付け | DBが必要な試験のみ。今回の基礎演習では使わない |
 | `reports/` | 実行結果のレポート、ログ | `runnora run` で保存 |
-| `document/docs/generated/` | 試験内容を説明する `.qmd` 原稿 | `runnora-instructions generate` で生成 |
+| `document/docs/generated/` | 試験内容を説明する `.qmd` 原稿 | `runnora-docgen generate` で生成 |
 | `document/docs/index.qmd` | 実施条件、実行方法、生成原稿の差し込み、結果欄 | 人が編集 |
 | `document/docs/_quarto.yml` | 文書の表題、構成、出力形式 | 文書担当者が管理 |
 
@@ -56,7 +56,7 @@ format:
 | 実行するツール | 入力 | 出力 |
 |---|---|---|
 | `runnora generate` | OpenAPI | テスト用YAMLとcase JSONの雛形 |
-| `runnora-instructions generate` | suite、template、case JSONなど | 手順書用の分割 `.qmd` 原稿 |
+| `runnora-docgen generate` | suite、template、case JSONなど | 手順書用の分割 `.qmd` 原稿 |
 | `quarto render` | `.qmd` と文書設定 | 閲覧用HTML |
 
 ## Step 0　環境と作業フォルダの準備
@@ -80,13 +80,13 @@ format:
 PowerShellを開き、次の3行を自分の配置先に合わせます。例は3つのリポジトリが `C:\Users\ramse\Projects` にある環境です。以降、同じPowerShellを使ってください。新しいターミナルでは変数を再設定する必要があります。
 
 ```powershell
-$repo = 'C:\Users\ramse\Projects\runnora_test_iInstructions'
+$repo = 'C:\Users\ramse\Projects\runnora-docgen'
 $runnoraRepo = 'C:\Users\ramse\Projects\runnora'
 $runnora = Join-Path $runnoraRepo 'runnora.exe'
 $wiremockJar = Join-Path $runnoraRepo 'docs\tools\wiremock-standalone-3.13.2.jar'
 $assets = Join-Path $repo 'docs\tutorial\assets'
 $lab = Join-Path $repo 'tmp\my-first-api-test'
-$docgen = Join-Path $repo 'tmp\runnora-instructions.exe'
+$docgen = Join-Path $repo 'tmp\runnora-docgen.exe'
 
 Test-Path $runnora
 Test-Path $wiremockJar
@@ -323,7 +323,7 @@ if ($LASTEXITCODE -ne 0) { throw 'モック生成に失敗しました' }
 次の2つの絶対パスを自分の環境に合わせてください。このターミナルは起動したままにします。
 
 ```powershell
-java -jar 'C:\Users\ramse\Projects\runnora\docs\tools\wiremock-standalone-3.13.2.jar' --root-dir 'C:\Users\ramse\Projects\runnora_test_iInstructions\tmp\my-first-api-test\wiremock-out' --port 18080 --bind-address 127.0.0.1
+java -jar 'C:\Users\ramse\Projects\runnora\docs\tools\wiremock-standalone-3.13.2.jar' --root-dir 'C:\Users\ramse\Projects\runnora-docgen\tmp\my-first-api-test\wiremock-out' --port 18080 --bind-address 127.0.0.1
 ```
 
 元のPowerShellで応答を確認します。

@@ -9,9 +9,9 @@ import (
 	"sort"
 	"strings"
 
-	"github.com/ramsesyok/runnora-test-instructions/internal/model"
-	"github.com/ramsesyok/runnora-test-instructions/internal/render"
-	"github.com/ramsesyok/runnora-test-instructions/internal/source"
+	"github.com/ramsesyok/runnora-docgen/internal/model"
+	"github.com/ramsesyok/runnora-docgen/internal/render"
+	"github.com/ramsesyok/runnora-docgen/internal/source"
 )
 
 type Options struct {
@@ -90,7 +90,7 @@ func Generate(ctx context.Context, opts Options) (*Result, error) {
 		}
 		sort.Strings(manifestFiles)
 		manifestData, err := json.MarshalIndent(manifest{
-			Generator: "runnora-instructions",
+			Generator: "runnora-docgen",
 			Scenario:  scenario.Name,
 			Source:    scenario.SourcePath,
 			SHA256:    scenario.SourceHash,

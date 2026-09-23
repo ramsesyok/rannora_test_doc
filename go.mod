@@ -1,4 +1,4 @@
-module github.com/ramsesyok/runnora-test-instructions
+module github.com/ramsesyok/runnora-docgen
 
 go 1.26.4
 

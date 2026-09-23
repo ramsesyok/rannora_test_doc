@@ -1,5 +1,5 @@
 {
-  "generator": "runnora-instructions",
+  "generator": "runnora-docgen",
   "scenario": "ORD-003 二重キャンセルで在庫を二重加算しない",
   "source": "runbooks/double-cancel.yml",
   "sha256": "643698c7870bf9efe9d932cf88a39ce2b99ba12ecff3bdf1337f4003684d61b9",

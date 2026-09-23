@@ -2344,7 +2344,7 @@ strong { color: #126961; }
 <tr class="odd">
 <td><code>document/docs/generated/</code></td>
 <td>試験内容を説明する <code>.qmd</code> 原稿</td>
-<td><code>runnora-instructions generate</code> で生成</td>
+<td><code>runnora-docgen generate</code> で生成</td>
 </tr>
 <tr class="even">
 <td><code>document/docs/index.qmd</code></td>
@@ -2380,7 +2380,7 @@ strong { color: #126961; }
 <td>テスト用YAMLとcase JSONの雛形</td>
 </tr>
 <tr class="even">
-<td><code>runnora-instructions generate</code></td>
+<td><code>runnora-docgen generate</code></td>
 <td>suite、template、case JSONなど</td>
 <td>手順書用の分割 <code>.qmd</code> 原稿</td>
 </tr>
@@ -2443,13 +2443,13 @@ strong { color: #126961; }
 <section id="パスを設定する" class="level3">
 <h3 class="anchored" data-anchor-id="パスを設定する">パスを設定する</h3>
 <p>PowerShellを開き、次の3行を自分の配置先に合わせます。例は3つのリポジトリが <code>C:\Users\ramse\Projects</code> にある環境です。以降、同じPowerShellを使ってください。新しいターミナルでは変数を再設定する必要があります。</p>
-<div class="code-copy-outer-scaffold"><div class="sourceCode" id="cb1"><pre class="sourceCode powershell code-with-copy"><code class="sourceCode powershell"><span id="cb1-1"><a href="#cb1-1" aria-hidden="true" tabindex="-1"></a><span class="va">$repo</span> <span class="op">=</span> <span class="st">&#39;C:\Users\ramse\Projects\runnora_test_iInstructions&#39;</span></span>
+<div class="code-copy-outer-scaffold"><div class="sourceCode" id="cb1"><pre class="sourceCode powershell code-with-copy"><code class="sourceCode powershell"><span id="cb1-1"><a href="#cb1-1" aria-hidden="true" tabindex="-1"></a><span class="va">$repo</span> <span class="op">=</span> <span class="st">&#39;C:\Users\ramse\Projects\runnora-docgen&#39;</span></span>
 <span id="cb1-2"><a href="#cb1-2" aria-hidden="true" tabindex="-1"></a><span class="va">$runnoraRepo</span> <span class="op">=</span> <span class="st">&#39;C:\Users\ramse\Projects\runnora&#39;</span></span>
 <span id="cb1-3"><a href="#cb1-3" aria-hidden="true" tabindex="-1"></a><span class="va">$runnora</span> <span class="op">=</span> <span class="fu">Join-Path</span> <span class="va">$runnoraRepo</span> <span class="st">&#39;runnora.exe&#39;</span></span>
 <span id="cb1-4"><a href="#cb1-4" aria-hidden="true" tabindex="-1"></a><span class="va">$wiremockJar</span> <span class="op">=</span> <span class="fu">Join-Path</span> <span class="va">$runnoraRepo</span> <span class="st">&#39;docs\tools\wiremock-standalone-3.13.2.jar&#39;</span></span>
 <span id="cb1-5"><a href="#cb1-5" aria-hidden="true" tabindex="-1"></a><span class="va">$assets</span> <span class="op">=</span> <span class="fu">Join-Path</span> <span class="va">$repo</span> <span class="st">&#39;docs\tutorial\assets&#39;</span></span>
 <span id="cb1-6"><a href="#cb1-6" aria-hidden="true" tabindex="-1"></a><span class="va">$lab</span> <span class="op">=</span> <span class="fu">Join-Path</span> <span class="va">$repo</span> <span class="st">&#39;tmp\my-first-api-test&#39;</span></span>
-<span id="cb1-7"><a href="#cb1-7" aria-hidden="true" tabindex="-1"></a><span class="va">$docgen</span> <span class="op">=</span> <span class="fu">Join-Path</span> <span class="va">$repo</span> <span class="st">&#39;tmp\runnora-instructions.exe&#39;</span></span>
+<span id="cb1-7"><a href="#cb1-7" aria-hidden="true" tabindex="-1"></a><span class="va">$docgen</span> <span class="op">=</span> <span class="fu">Join-Path</span> <span class="va">$repo</span> <span class="st">&#39;tmp\runnora-docgen.exe&#39;</span></span>
 <span id="cb1-8"><a href="#cb1-8" aria-hidden="true" tabindex="-1"></a></span>
 <span id="cb1-9"><a href="#cb1-9" aria-hidden="true" tabindex="-1"></a><span class="fu">Test-Path</span> <span class="va">$runnora</span></span>
 <span id="cb1-10"><a href="#cb1-10" aria-hidden="true" tabindex="-1"></a><span class="fu">Test-Path</span> <span class="va">$wiremockJar</span></span>
@@ -2653,7 +2653,7 @@ cases/generated/pet/get_getPetById/default.json</code></pre>
 <section id="別のpowershellでwiremockを起動する" class="level3">
 <h3 class="anchored" data-anchor-id="別のpowershellでwiremockを起動する">別のPowerShellでWireMockを起動する</h3>
 <p>次の2つの絶対パスを自分の環境に合わせてください。このターミナルは起動したままにします。</p>
-<div class="code-copy-outer-scaffold"><div class="sourceCode" id="cb13"><pre class="sourceCode powershell code-with-copy"><code class="sourceCode powershell"><span id="cb13-1"><a href="#cb13-1" aria-hidden="true" tabindex="-1"></a>java <span class="op">-</span>jar <span class="st">&#39;C:\Users\ramse\Projects\runnora\docs\tools\wiremock-standalone-3.13.2.jar&#39;</span> <span class="op">--</span>root-dir <span class="st">&#39;C:\Users\ramse\Projects\runnora_test_iInstructions\tmp\my-first-api-test\wiremock-out&#39;</span> <span class="op">--</span>port <span class="dv">18080</span> <span class="op">--</span>bind-address <span class="dv">127.0</span><span class="op">.</span><span class="dv">0.1</span></span></code></pre></div><button title="コピー" class="code-copy-button"><i class="bi"></i></button></div>
+<div class="code-copy-outer-scaffold"><div class="sourceCode" id="cb13"><pre class="sourceCode powershell code-with-copy"><code class="sourceCode powershell"><span id="cb13-1"><a href="#cb13-1" aria-hidden="true" tabindex="-1"></a>java <span class="op">-</span>jar <span class="st">&#39;C:\Users\ramse\Projects\runnora\docs\tools\wiremock-standalone-3.13.2.jar&#39;</span> <span class="op">--</span>root-dir <span class="st">&#39;C:\Users\ramse\Projects\runnora-docgen\tmp\my-first-api-test\wiremock-out&#39;</span> <span class="op">--</span>port <span class="dv">18080</span> <span class="op">--</span>bind-address <span class="dv">127.0</span><span class="op">.</span><span class="dv">0.1</span></span></code></pre></div><button title="コピー" class="code-copy-button"><i class="bi"></i></button></div>
 <p>元のPowerShellで応答を確認します。</p>
 <div class="code-copy-outer-scaffold"><div class="sourceCode" id="cb14"><pre class="sourceCode powershell code-with-copy"><code class="sourceCode powershell"><span id="cb14-1"><a href="#cb14-1" aria-hidden="true" tabindex="-1"></a><span class="fu">Invoke-RestMethod</span> http<span class="op">://</span>localhost<span class="op">:</span><span class="dv">18080</span><span class="op">/</span>pet<span class="op">/</span><span class="dv">100</span></span></code></pre></div><button title="コピー" class="code-copy-button"><i class="bi"></i></button></div>
 <p>idが100、nameがdoggie、statusがavailableなら準備完了です。ポートが使用中なら、起動時の番号と以降のURLを同じ空きポートへ変更します。</p>

@@ -1,5 +1,5 @@
 {
-  "generator": "runnora-instructions",
+  "generator": "runnora-docgen",
   "scenario": "ペット情報更新",
   "source": "practice/runbooks/generated/pet/put_updatePet.suite.yml",
   "sha256": "6c5113c43825012083f65abacaccc0f2788be13f268c396335277a1e5c929215",

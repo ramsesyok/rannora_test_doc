@@ -4,7 +4,7 @@ import (
 	"fmt"
 	"io"
 
-	"github.com/ramsesyok/runnora-test-instructions/internal/generator"
+	"github.com/ramsesyok/runnora-docgen/internal/generator"
 	"github.com/spf13/cobra"
 )
 

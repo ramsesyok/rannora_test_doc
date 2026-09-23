@@ -4,7 +4,7 @@ import (
 	"fmt"
 	"os"
 
-	"github.com/ramsesyok/runnora-test-instructions/cmd"
+	"github.com/ramsesyok/runnora-docgen/cmd"
 )
 
 func main() {

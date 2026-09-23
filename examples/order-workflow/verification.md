@@ -33,7 +33,7 @@
 ## 初回の生成・表示確認（3シナリオ）
 
 - `runnora generate`：OpenAPIを読み込み、4業務operation分のtemplate・suite・caseを生成。
-- `runnora-instructions generate`：3シナリオそれぞれの手順・HTTP・本文・検証式とmanifestを生成。
+- `runnora-docgen generate`：3シナリオそれぞれの手順・HTTP・本文・検証式とmanifestを生成。
 - `scripts/build-docs.ps1`：ビルド、OpenAPI雛形生成、QMD生成、`ddq pdf` → `ddq html` の発行まで成功。
 - 文書構造：採番しない前付け＋7章。各章は `chapters/<章>/index.qmd` と節ごとのQMDに分割。
 - HTML：`docs/_book/` に前付けと7章を出力し、共通CSS・JavaScript・検索データを同梱。生成表34件、参照47件を解決。配布はフォルダ一式。

@@ -1,5 +1,5 @@
 {
-  "generator": "runnora-instructions",
+  "generator": "runnora-docgen",
   "scenario": "ペット画像アップロード",
   "source": "practice/runbooks/generated/pet/post_uploadFile.suite.yml",
   "sha256": "b904dd2f708e0d5df7583b3adb9f947d4eccf924681c1bc377e478f4af404ead",

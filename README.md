@@ -1,4 +1,8 @@
-# runnora-instructions
+# runnora-docgen
+
+GitHubリポジトリ: [ramsesyok/runnora-docgen](https://github.com/ramsesyok/runnora-docgen)
+
+CLI名は `runnora-docgen` です。試験実行ツール `runnora` のシナリオを文書化します。
 
 ## 新人向けチュートリアル
 
@@ -31,8 +35,11 @@ Client streaming RPC と双方向 streaming RPC は初期版の対象外です�
 
 ## コマンド
 
+リポジトリのルートでビルドし、実行します。
+
 ```powershell
-go run . generate `
+go build -o runnora-docgen.exe .
+.\runnora-docgen.exe generate `
   --out C:\work\test-document\generated `
   --config C:\work\scenario\config.yaml `
   --before-sql C:\work\scenario\sql\setup.sql `

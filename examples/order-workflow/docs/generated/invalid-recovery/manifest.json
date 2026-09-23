@@ -1,5 +1,5 @@
 {
-  "generator": "runnora-instructions",
+  "generator": "runnora-docgen",
   "scenario": "ORD-005 数量不正を修正して注文し、取消まで確認する",
   "source": "runbooks/invalid-recovery.yml",
   "sha256": "c64777ee3b28f0947753eba174989bea0cf39dd40c5f68ecd19719d68f38317b",

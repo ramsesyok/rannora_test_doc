@@ -1,5 +1,5 @@
 {
-  "generator": "runnora-instructions",
+  "generator": "runnora-docgen",
   "scenario": "ORD-001 注文の作成からキャンセルまで",
   "source": "runbooks/order-lifecycle.yml",
   "sha256": "b658330204ae676b32ab778da653231718630f1a6de3d56214619cc29c6096a8",

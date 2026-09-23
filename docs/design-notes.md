@@ -32,13 +32,13 @@ runnora 用の runn シナリオ YAML を、テストレビュワーが内容を
 | フォルダ | 現状と新ツールとの関係 |
 |---|---|
 | `runnora/` | シナリオの実行基盤。入力仕様・実例の確認元。`test/runbooks/` に HTTP・gRPC・DB の例、`practice/` に suite・template・ケース JSON、`docs/tutorial/grpc/` に streaming の例がある |
-| `runnora_test_iInstructions/` | 変換ツールの開発先。調査開始時は空。本設計書を配置済み。独立した Go モジュール・CLI とする案 |
+| `runnora-docgen/` | 変換ツールの開発先。調査開始時は空。本設計書を配置済み。独立した Go モジュール・CLI とする案 |
 | `design-doc-quarto-template/` | `.tbl` の処理と組版・発行の基盤。`template/` は機構の原本、`manual/` は記法・運用説明、`cli/` は ddq、`docs/` はサンプル文書 |
 
 ```text
 runnora 用の入力資産（YAML・JSON・SQL・実行条件など）
     ↓ 読み取り
-runnora_test_iInstructions（Go 製変換ツール）
+runnora-docgen（Go 製変換ツール）
     ↓ 分割 .qmd 原稿を生成
 既存の文書プロジェクトへ差し込み
     ↓ 既存文書の章立て・テンプレート機構を利用
@@ -164,7 +164,7 @@ XYZ.json
 実装したソース構成:
 
 ```text
-runnora_test_iInstructions/
+runnora-docgen/
 ├── docs/                  設計・運用資料
 ├── cmd/<コマンド名>/       CLI
 ├── internal/parse/         入力解析
@@ -243,7 +243,7 @@ gRPC の送信メッセージは YAML 上の入力表現を保持する。JSON �
 cobra-cli でアプリケーションと `generate` サブコマンドの雛形を作成し、テスト可能なコマンドファクトリへ整理した。
 
 ```text
-runnora-instructions
+runnora-docgen
 └── generate <runbook.yml>...
     ├── --out, -o
     ├── --config, -c

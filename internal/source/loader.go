@@ -12,7 +12,7 @@ import (
 	"strconv"
 	"strings"
 
-	"github.com/ramsesyok/runnora-test-instructions/internal/model"
+	"github.com/ramsesyok/runnora-docgen/internal/model"
 	"gopkg.in/yaml.v3"
 )
 

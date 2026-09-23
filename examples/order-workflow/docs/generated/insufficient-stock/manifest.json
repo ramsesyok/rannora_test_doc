@@ -1,5 +1,5 @@
 {
-  "generator": "runnora-instructions",
+  "generator": "runnora-docgen",
   "scenario": "ORD-002 在庫不足時に在庫を変更しない",
   "source": "runbooks/insufficient-stock.yml",
   "sha256": "9d6ee0ab3ea04b5532c26673f0293664126c13dcc9acf77a1d3fe31830cef646",

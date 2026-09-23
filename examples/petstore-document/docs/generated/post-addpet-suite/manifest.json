@@ -1,5 +1,5 @@
 {
-  "generator": "runnora-instructions",
+  "generator": "runnora-docgen",
   "scenario": "ペット登録",
   "source": "practice/runbooks/generated/pet/post_addPet.suite.yml",
   "sha256": "aad406722c2be107d235e2cd8b2073ea7e0c9c0b62642cd1d61cb3dd039f5ad9",

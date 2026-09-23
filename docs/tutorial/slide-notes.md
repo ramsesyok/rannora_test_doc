@@ -38,7 +38,7 @@ Step 4の正常系caseから抜粋。headersやqueryParamsも完成例にある�
 
 ## 10. 2つのgenerateコマンド
 
-Step 2とStep 9を対応させて説明する。runnora-instructionsはこのリポジトリのCLI。実行や実レスポンスの収集はしない。手順書と実行記録の役割を混同しない。
+Step 2とStep 9を対応させて説明する。runnora-docgenはこのリポジトリのCLI。実行や実レスポンスの収集はしない。手順書と実行記録の役割を混同しない。
 
 ## 11. 生成される手順書原稿
 

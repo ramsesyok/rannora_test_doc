@@ -7,7 +7,7 @@ import (
 	"regexp"
 	"strings"
 
-	"github.com/ramsesyok/runnora-test-instructions/internal/model"
+	"github.com/ramsesyok/runnora-docgen/internal/model"
 )
 
 var (

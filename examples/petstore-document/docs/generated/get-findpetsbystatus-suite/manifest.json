@@ -1,5 +1,5 @@
 {
-  "generator": "runnora-instructions",
+  "generator": "runnora-docgen",
   "scenario": "ステータスによるペット検索",
   "source": "practice/runbooks/generated/pet/get_findPetsByStatus.suite.yml",
   "sha256": "d3347e681dd58aadfe6283b04c76eb2da5e80824a1304cd299885fcbb8d05550",

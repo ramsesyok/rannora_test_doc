@@ -11,7 +11,7 @@ import (
 // leaves room for future validate and inspect subcommands.
 func NewRootCmd(stdout, stderr io.Writer) *cobra.Command {
 	root := &cobra.Command{
-		Use:           "runnora-instructions",
+		Use:           "runnora-docgen",
 		Short:         "runnora シナリオからレビュー用テスト手順書を生成する",
 		SilenceUsage:  true,
 		SilenceErrors: true,

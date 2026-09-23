@@ -5,7 +5,7 @@ import (
 	"path/filepath"
 	"testing"
 
-	"github.com/ramsesyok/runnora-test-instructions/internal/model"
+	"github.com/ramsesyok/runnora-docgen/internal/model"
 )
 
 func TestLoadSuiteResolvesTemplateCaseAndStatus(t *testing.T) {

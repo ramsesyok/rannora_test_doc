@@ -9,7 +9,7 @@ import (
 	"sort"
 	"strings"
 
-	"github.com/ramsesyok/runnora-test-instructions/internal/model"
+	"github.com/ramsesyok/runnora-docgen/internal/model"
 )
 
 // Read static JSON inputs so the review tables and manifest describe the same

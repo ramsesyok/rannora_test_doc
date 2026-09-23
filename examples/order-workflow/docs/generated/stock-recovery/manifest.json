@@ -1,5 +1,5 @@
 {
-  "generator": "runnora-instructions",
+  "generator": "runnora-docgen",
   "scenario": "ORD-004 複数注文で在庫を使い切り、取消後に再注文する",
   "source": "runbooks/stock-recovery.yml",
   "sha256": "3b14c1569a47c4e812ab46fc11d05c20b92c332aa42c829a63609b73564670e9",

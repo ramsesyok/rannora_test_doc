@@ -4,7 +4,7 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/ramsesyok/runnora-test-instructions/internal/model"
+	"github.com/ramsesyok/runnora-docgen/internal/model"
 )
 
 func TestScenarioReviewerReferences(t *testing.T) {
