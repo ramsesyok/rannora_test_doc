@@ -1,0 +1,24 @@
+desc: 注文の保存内容を取得する template
+labels:
+  - generated
+  - openapi
+  - orders
+  - method:get
+  - operation:getOrder
+  - mode:template
+
+runners:
+  req:
+    endpoint: ${RUNNORA_BASE_URL}
+
+vars:
+  case: {}
+
+steps:
+  call_api:
+    req:
+      /orders/{{ vars.case.pathParams.orderId }}:
+        get:
+          headers: "{{ vars.case.headers }}"
+    test: |
+      current.res.status == vars.case.expect.status

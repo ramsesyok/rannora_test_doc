@@ -1,0 +1,21 @@
+desc: 注文の保存内容を取得する suite
+labels:
+  - generated
+  - openapi
+  - orders
+  - method:get
+  - operation:getOrder
+  - mode:suite
+
+vars:
+  cases:
+    - json://../../../cases/generated/orders/get_getOrder/default.json
+
+steps:
+  run_case:
+    loop:
+      count: len(vars.cases)
+    include:
+      path: ./get_getOrder.template.yml
+      vars:
+        case: "{{ vars.cases[i] }}"

@@ -1,0 +1,3 @@
+## テストシナリオ
+
+{{< include ../../generated/stock-recovery/scenario.qmd >}}

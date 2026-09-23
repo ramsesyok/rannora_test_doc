@@ -1,0 +1,17 @@
+Runbooks: 1, Passed: 0, Failed: 1
+  FAIL: reports/failure-check/wrong-stock.yml
+    Error: test failed on "ORD-001 注文の作成からキャンセルまで".steps.stock_reserved "注文2個分の在庫が引き当てられ、5個から3個に減ったことを確認する": condition is not true
+
+Condition:
+  current.res.status == 200 && current.res.body.available == steps.stock_before.res.body.available - 3
+  │
+  ├── current.res.status == 200 => true
+  │   ├── current.res.status => 200
+  │   └── 200
+  └── current.res.body.available == steps.stock_before.res.body.available - 3 => false
+      ├── current.res.body.available => 3
+      └── steps.stock_before.res.body.available - 3 => 2
+          ├── steps.stock_before.res.body.available => 5
+          └── 3
+  
+

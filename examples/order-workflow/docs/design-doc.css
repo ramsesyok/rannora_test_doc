@@ -1,0 +1,138 @@
+/* ============================================================
+   社内レビュー用 HTML のスタイル（Quarto の html 出力）
+
+   納品物は PDF。ここでは紙の様式（外枠・資料番号欄・社名・ページ番号）は
+   出さず、指摘箇所の特定に使う章番号・図表番号だけを確実に見せる。
+   .ipo / .landscape は design-doc.lua が HTML 出力時に div として組み立てる。
+
+   ■ このファイルで調整できないもの（別の場所を触ること）
+     - ページ全体の幅・左ペインの幅 … _quarto.yml の format.html.grid
+     - 章番号の有無                 … _quarto.yml の number-sections
+     - 図表番号の書式（章.節-連番） … postprocess-html.mjs
+     - PDF の見た目                 … lib.typ（このファイルは PDF に影響しない）
+
+   ■ PDF と揃えるべき箇所
+     IPO 図の列比だけは lib.typ の IPO-COLS と同じ値にしてある。
+     片方を変えたらもう片方も変えること。
+   ============================================================ */
+
+body { font-family: "Noto Sans CJK JP", "Yu Gothic", sans-serif; }
+
+/* 見出しレベル1（章）の番号を PDF と同じ「1.」表記にする。
+   Quarto は HTML では章番号を末尾ピリオドなし（1）で出すため CSS で補う。
+   .chapter-number は本文見出し・サイドバー・目次すべてで使われるので一律で付く。
+   節（h2 以降）は data-number 由来で 1.1 表記のまま（PDF と一致）。 */
+.chapter-number::after { content: "."; }
+
+/* 縦方向を詰めて 1 画面に多く表示する（社内レビュー用 HTML）。
+   段落間隔・行間・見出し前後の余白を控えめにする。左ペイン（目次・章ナビ）は
+   触らず本文だけを対象にする。PDF には影響しない。 */
+body { line-height: 1.45; }
+main { margin-top: 4px !important; margin-bottom: 4px !important; }
+#title-block-header { margin-bottom: .4rem !important; }
+#quarto-document-content { padding-top: .2rem; }
+#quarto-document-content p,
+#quarto-document-content ul,
+#quarto-document-content ol { margin-bottom: .7em; }
+#quarto-document-content li { margin-bottom: .15em; }
+#quarto-document-content h1:not(.title),
+#quarto-document-content h2 { margin-top: 1em; margin-bottom: .35em; }
+#quarto-document-content h3,
+#quarto-document-content h4 { margin-top: .8em; margin-bottom: .25em; }
+#quarto-document-content figure,
+#quarto-document-content .quarto-figure { margin-top: .4em; margin-bottom: .6em; }
+#quarto-document-content figcaption { margin-bottom: .2em; }
+
+/* 表は本文幅いっぱい（PDF 側の列幅正規化と見た目を揃える） */
+table { width: 100%; border-collapse: collapse; }
+th, td { border: 1px solid #b0b0b0; padding: .2em .6em; }
+th { background: #f0f0f0; }
+td[rowspan], th[rowspan] { vertical-align: middle; }
+
+/* セル内の箇条書き・番号付きリスト（グリッド表のセルはブロック要素を持てる）。
+   ブラウザ／Bootstrap 既定の左インデント（2rem）とリスト下の余白はセルには広すぎるので
+   詰め、PDF（lib.typ の LIST-INDENT = 1文字ぶん）と見た目を揃える。数字は記号より
+   幅を食うので ol だけ少し広く取る（.ipo-col と同じ値）。
+   #quarto-document-content を前置しているのは、上の ul/ol の margin-bottom 指定より
+   詳細度を高くして打ち消すため。入れ子のリストにも同じ字下げが効く。 */
+#quarto-document-content th ul,
+#quarto-document-content td ul { margin: 0 0 .4em; padding-left: 1.2em; }
+#quarto-document-content th ol,
+#quarto-document-content td ol { margin: 0 0 .4em; padding-left: 1.4em; }
+/* 入れ子のリストは親項目の一部なので下余白を付けない（項目間が空いて見えるため） */
+#quarto-document-content th li > ul, #quarto-document-content th li > ol,
+#quarto-document-content td li > ul, #quarto-document-content td li > ol { margin-bottom: 0; }
+/* セル内の最後のブロック（段落＋箇条書きを混ぜたときの末尾）の余白は落とす。
+   残すとセル下端だけ間延びして、上下の行と高さが揃わない。 */
+#quarto-document-content th > :last-child,
+#quarto-document-content td > :last-child { margin-bottom: 0; }
+
+/* 幅広の表は紙のように横向きにできないので、はみ出す分をスクロールさせる */
+.landscape { overflow-x: auto; }
+.landscape > table { min-width: 40em; }
+
+/* 自前採番の表(.tbl/.ipo)のキャプション。Quarto の figcaption と体裁を揃える
+   （中央寄せ・表の直上）。番号は postprocess-html.mjs が先頭に前置する。 */
+.split-caption { text-align: center; margin: .4em 0 .2em; }
+
+/* ============================================================
+   IPO図（機能名/処理名 + 入力/処理/出力）
+   PDF の定型枠を画面向けに再現する。DOM 構造は design-doc.lua が組む:
+
+     .ipo
+       .ipo-title   … 機能名 / 値 / 処理名 / 値 の4セル（grid 4列）
+       .ipo-frame   … 見出し3つ + 本体3つ の6セル（grid 3列 × 暗黙2行）
+         .ipo-head  ×3   ← 入力 / 処理 / 出力
+         .ipo-col   ×3   ← 各欄の中身
+
+   列比 1 : 4.9 : 1.1 は lib.typ の IPO-COLS と同じ値。**両方直すこと。**
+   HTML には紙面が無いので高さは固定せず、min-height だけ与えて伸ばす
+   （PDF 側は IPO-BODY-ROW で固定）。
+   ============================================================ */
+.ipo { border: 1px solid #000; margin: 1.2em 0; }
+.ipo-title { display: grid; grid-template-columns: 8em 1fr 8em 1fr; }
+.ipo-title > div { padding: .35em .7em; border-bottom: 1px solid #000; }
+.ipo-title > div:not(:last-child) { border-right: 1px solid #000; }
+.ipo-title-label { font-weight: bold; text-align: center; background: #f7f7f7; }
+
+.ipo-frame { display: grid; grid-template-columns: 1fr 4.9fr 1.1fr; }
+.ipo-head {
+  font-weight: bold; text-align: center; padding: .35em 0;
+  background: #f7f7f7; border-bottom: 1px solid #000;
+}
+.ipo-head:not(:nth-child(3)) { border-right: 1px solid #000; }
+.ipo-col { padding: .4em .5em; min-height: 8em; }
+.ipo-col:not(:last-child) { border-right: 1px solid #000; }
+/* 入力/出力欄は箇条書き。定型枠を広く使うため余白は詰めるが、記号は残す
+   （複数行に折り返したとき項目の区切りが分かるように）。折り返し行は記号ぶん
+   ぶら下げる（list-style-position は既定の outside）。PDF 側は lib.typ の _ipo-tight。 */
+.ipo-col ul { margin: 0; padding-left: 1.2em; }
+.ipo-col ol { margin: 0; padding-left: 1.4em; }
+.ipo-col img { max-width: 100%; height: auto; }
+
+/* 図（mermaid / 画像）は中央寄せ、はみ出さない。
+   本文幅を 1920px 基準に広げた（_quarto.yml の grid）ぶん、幅指定 90% の図が
+   1100px 超に引き伸ばされて読みにくくなるため上限を設ける。
+   PDF は lib.typ 側で組むのでこの指定の影響を受けない。 */
+#quarto-document-content img { max-width: min(100%, 900px); height: auto; }
+#quarto-document-content p:has(> img) { text-align: center; }
+/* 図番号のキャプションも中央寄せにする（表・.tbl・PDF と揃える）。
+   Quarto の既定 CSS は figure.quarto-float-tbl（表）の figcaption にしか
+   text-align: center を当てないため、図（quarto-float-fig）や
+   コードリスト（quarto-float-lst）のキャプションだけ左寄せで残ってしまう。 */
+#quarto-document-content figcaption { text-align: center; }
+/* IPO の各欄の中だけは枠いっぱいに使う（上の上限を打ち消す） */
+#quarto-document-content .ipo-col img { max-width: 100%; }
+
+/* PlantUML サーバに届かないときのプレビュー表示（design-doc.lua の .plantuml-fallback）。
+   図の代わりにソースを枠付きで出す。目立つ色にして「図が描けていない」と分かるようにする。
+   PDF・配布 HTML ではエラーで止まるので、この枠は執筆者のプレビューにしか出ない。 */
+.plantuml-fallback {
+  border: 2px dashed #c60;
+  background: #fff8f0;
+  padding: 0.6em 1em;
+  margin: 1em 0;
+}
+.plantuml-fallback > p { margin: 0 0 0.4em; }
+.plantuml-fallback > p:first-child { color: #c60; }
+.plantuml-fallback pre { margin: 0; }

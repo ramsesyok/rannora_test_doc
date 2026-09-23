@@ -1,0 +1,26 @@
+desc: 注文をキャンセルし、数量分の在庫を戻す template
+labels:
+  - generated
+  - openapi
+  - orders
+  - method:post
+  - operation:cancelOrder
+  - mode:template
+
+runners:
+  req:
+    endpoint: ${RUNNORA_BASE_URL}
+
+vars:
+  case: {}
+
+steps:
+  call_api:
+    req:
+      /orders/{{ vars.case.pathParams.orderId }}/cancel:
+        post:
+          headers: "{{ vars.case.headers }}"
+          body:
+            application/json: "{{ vars.case.requestBody }}"
+    test: |
+      current.res.status == vars.case.expect.status

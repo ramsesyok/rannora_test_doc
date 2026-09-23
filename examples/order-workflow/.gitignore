@@ -1,0 +1,10 @@
+/bin/
+/reports/
+/docs/.quarto/
+/docs/_site/
+/docs/_book/
+/docs/lib.typ
+/docs/typst-template.typ
+/docs/typst-show.typ
+/docs/_quarto-publish.yml
+/docs/generated/**/*.typ

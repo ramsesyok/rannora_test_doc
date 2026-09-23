@@ -1,0 +1,12 @@
+# ORD-003：生成された手順・詳細 {.landscape-chapter}
+
+前提：初期化により在庫5。合格条件：1回目の取消は200、同じIDへの2回目は409。
+注文はcancelledを維持し、最終在庫は5である。誤って2回とも加算すると7となり、最終検証が失敗する。
+
+{{< include 01-scenario.qmd >}}
+
+{{< include 02-http.qmd >}}
+
+{{< include 03-request.qmd >}}
+
+{{< include 04-expectations.qmd >}}

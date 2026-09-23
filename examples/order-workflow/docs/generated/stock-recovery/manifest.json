@@ -1,0 +1,109 @@
+{
+  "generator": "runnora-instructions",
+  "scenario": "ORD-004 複数注文で在庫を使い切り、取消後に再注文する",
+  "source": "runbooks/stock-recovery.yml",
+  "sha256": "3b14c1569a47c4e812ab46fc11d05c20b92c332aa42c829a63609b73564670e9",
+  "files": [
+    "expectations.qmd",
+    "http.qmd",
+    "request-json.qmd",
+    "scenario.qmd"
+  ],
+  "inputs": [
+    {
+      "kind": "runbook",
+      "path": "runbooks/stock-recovery.yml",
+      "sha256": "3b14c1569a47c4e812ab46fc11d05c20b92c332aa42c829a63609b73564670e9"
+    },
+    {
+      "kind": "json",
+      "path": "fixtures/requests/empty.json",
+      "sha256": "ca3d163bab055381827226140568f3bef7eaac187cebd76878e0b63e9e442356"
+    },
+    {
+      "kind": "json",
+      "path": "fixtures/responses/reset.json",
+      "sha256": "1b1d722f159f8bc157e4e63e45c61e5e1c42a334be0b9182c71c9d3c21bdc645"
+    },
+    {
+      "kind": "json",
+      "path": "fixtures/requests/order-2.json",
+      "sha256": "fdab0a62baa612fd856fec01e419c61e5c6265c82cc58ad8feeb49bcd20b5b03"
+    },
+    {
+      "kind": "json",
+      "path": "fixtures/responses/confirmed-2.json",
+      "sha256": "1974876ff955af2746097ba4ee892f4f11d666aa16590fbf5bd2e7bac47216ca"
+    },
+    {
+      "kind": "json",
+      "path": "fixtures/responses/stock-3.json",
+      "sha256": "c5d2c5d35c83a177d4bd69d43fd8cfe1b80ef00d529670131bf13213d4db5bb7"
+    },
+    {
+      "kind": "json",
+      "path": "fixtures/requests/order-3.json",
+      "sha256": "7b66bbbe9162ae50b9472dfa1da2de1431ddb180e377df46d7c2087999a5e85f"
+    },
+    {
+      "kind": "json",
+      "path": "fixtures/responses/confirmed-3.json",
+      "sha256": "854081bcff33f2535e2fd84832b686310b7a74401369c8202a179459cc73c369"
+    },
+    {
+      "kind": "json",
+      "path": "fixtures/responses/stock-0.json",
+      "sha256": "ffc1eac3e52768c34d7eef523539483e8183b763f6fe01bd9a111da4209b9979"
+    },
+    {
+      "kind": "json",
+      "path": "fixtures/requests/order-1.json",
+      "sha256": "fcf7d4155f98f6cc232d3dd546c83c79a6721df99573abd07f7e3d6803ec7dd5"
+    },
+    {
+      "kind": "json",
+      "path": "fixtures/responses/insufficient.json",
+      "sha256": "334d07e00cc98c09025aa0d8b96c0af0508b7d5e6214c04b8238fdfa479dbe04"
+    },
+    {
+      "kind": "json",
+      "path": "fixtures/responses/cancelled-2.json",
+      "sha256": "f3b8b1a2fa4b50fd919de76575679dacaedbb690d0a80fdd9ab91170bf997fc7"
+    },
+    {
+      "kind": "json",
+      "path": "fixtures/responses/stock-2.json",
+      "sha256": "ff89e06950c1dc4996918c717bd72b45a1a19a9798b316fa9cf132444826379f"
+    },
+    {
+      "kind": "json",
+      "path": "fixtures/responses/confirmed-1.json",
+      "sha256": "350ef6948d6a995343dad58cb6015961627d5e6d8c4ab5fcb53e004a23ed8b5e"
+    },
+    {
+      "kind": "json",
+      "path": "fixtures/responses/stock-1.json",
+      "sha256": "4540951503b51ba22c489fd5391fca247a285be466dc65d7cbb2031eff4e6c67"
+    },
+    {
+      "kind": "json",
+      "path": "fixtures/responses/cancelled-3.json",
+      "sha256": "6342b2869cab5bb82136cc0b5540ea727c0cb44bd7db2700adfb1c0b944bfee1"
+    },
+    {
+      "kind": "json",
+      "path": "fixtures/responses/cancelled-1.json",
+      "sha256": "d2c3431e1c7acc2aa3aa68230b73892b7caef7ef5af1e1255d41a602a0b77dea"
+    },
+    {
+      "kind": "json",
+      "path": "fixtures/responses/stock-5.json",
+      "sha256": "7282de5feaa25b61cbf54da087f6c968555a662dacc5484bdfd094b14152d61b"
+    },
+    {
+      "kind": "config",
+      "path": "config.yaml",
+      "sha256": "9e0f8ec335a42aef52ca0133ed97908363e005aaca4caafaa07302b0300c7e07"
+    }
+  ]
+}

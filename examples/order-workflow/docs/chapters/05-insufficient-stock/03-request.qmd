@@ -1,0 +1,3 @@
+## リクエストボディ
+
+{{< include ../../generated/insufficient-stock/request-json.qmd >}}

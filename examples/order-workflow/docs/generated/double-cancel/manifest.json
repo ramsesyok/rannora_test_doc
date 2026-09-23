@@ -1,0 +1,24 @@
+{
+  "generator": "runnora-instructions",
+  "scenario": "ORD-003 二重キャンセルで在庫を二重加算しない",
+  "source": "runbooks/double-cancel.yml",
+  "sha256": "643698c7870bf9efe9d932cf88a39ce2b99ba12ecff3bdf1337f4003684d61b9",
+  "files": [
+    "expectations.qmd",
+    "http.qmd",
+    "request-json.qmd",
+    "scenario.qmd"
+  ],
+  "inputs": [
+    {
+      "kind": "runbook",
+      "path": "runbooks/double-cancel.yml",
+      "sha256": "643698c7870bf9efe9d932cf88a39ce2b99ba12ecff3bdf1337f4003684d61b9"
+    },
+    {
+      "kind": "config",
+      "path": "config.yaml",
+      "sha256": "9e0f8ec335a42aef52ca0133ed97908363e005aaca4caafaa07302b0300c7e07"
+    }
+  ]
+}

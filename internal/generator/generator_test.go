@@ -64,7 +64,7 @@ steps:
 	if err != nil {
 		t.Fatal(err)
 	}
-	if !strings.Contains(string(scenarioData), "ステータス：HTTP 200") {
+	if !strings.Contains(string(scenarioData), `期待値：\[200\]`) {
 		t.Fatalf("scenario does not contain status:\n%s", scenarioData)
 	}
 	if strings.Contains(string(scenarioData), filepath.Clean(dir)) {
@@ -82,7 +82,7 @@ steps:
 	if strings.Contains(string(scenarioData), "GET http://example.test/users") {
 		t.Fatalf("scenario duplicates HTTP method and URL:\n%s", scenarioData)
 	}
-	if !strings.Contains(string(scenarioData), "@tbl-http-") || !strings.Contains(string(scenarioData), "手順 1") {
+	if !strings.Contains(string(scenarioData), "URL：[@tbl-http-") || !strings.Contains(string(scenarioData), `]-\[1\]`) {
 		t.Fatalf("scenario does not reference HTTP call details:\n%s", scenarioData)
 	}
 	httpData, err := os.ReadFile(filepath.Join(output, "scenario", "http.qmd"))

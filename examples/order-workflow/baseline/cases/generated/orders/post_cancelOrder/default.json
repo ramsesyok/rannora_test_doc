@@ -1,0 +1,21 @@
+{
+  "name": "default",
+  "description": "注文をキャンセルし、数量分の在庫を戻す",
+  "pathParams": {
+    "orderId": "ORD-000001"
+  },
+  "queryParams": {},
+  "headers": {},
+  "requestBody": {},
+  "expect": {
+    "status": 200,
+    "bodyMode": "subset",
+    "body": {
+      "id": "ORD-000001",
+      "quantity": 2,
+      "sku": "PEN-001",
+      "status": "cancelled"
+    },
+    "ignorePaths": []
+  }
+}

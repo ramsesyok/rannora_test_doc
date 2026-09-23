@@ -1,0 +1,30 @@
+Runbooks: 1, Passed: 0, Failed: 1
+  FAIL: C:\Users\ramse\Projects\runnora_test_iInstructions\tmp\external-json-negative/runbooks/invalid-recovery.yml
+    Error: test failed on "ORD-005 数量不正を修正して注文し、取消まで確認する".steps.create_corrected "数量1の外部JSONに切り替えて注文する": condition is not true
+
+Condition:
+  current.res.status == 201 &&
+  current.res.body.id != "" &&
+  compare(current.res.body, vars.res_confirmed_1, [".id"])
+  
+  │
+  ├── current.res.status == 201 && current.res.body.id != "" => true
+  │   ├── current.res.status == 201 => true
+  │   │   ├── current.res.status => 201
+  │   │   └── 201
+  │   └── current.res.body.id != "" => true
+  │       ├── current.res.body.id => "ORD-000007"
+  │       └── ""
+  └── compare(current.res.body, vars.res_confirmed_1, [".id"]) => false
+      ├── (diff) =>   map[string]any{
+      │   - 	"id":       string("ORD-000007"),
+      │   - 	"quantity": float64(1),
+      │   + 	"quantity": float64(99),
+      │     	"sku":      string("PEN-001"),
+      │     	"status":   string("confirmed"),
+      │     }
+      ├── current.res.body => {"id":"ORD-000007","quantity":1,"sku":"PEN-001","status":"confirmed"}
+      ├── vars.res_confirmed_1 => {"quantity":99,"sku":"PEN-001","status":"confirmed"}
+      └── [".id"] => [".id"]
+  
+

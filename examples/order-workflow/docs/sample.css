@@ -1,0 +1,7 @@
+/* Readable standalone procedure, including wide generated scenario tables. */
+body { font-family: "Yu Gothic", "Meiryo", sans-serif; }
+.landscape { overflow-x: auto; margin-block: 1.25rem; }
+table { font-size: .88rem; }
+pre, code { overflow-wrap: anywhere; }
+table td { vertical-align: top; }
+.callout { margin-block: 1.5rem; }

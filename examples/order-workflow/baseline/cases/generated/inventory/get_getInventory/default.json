@@ -1,0 +1,19 @@
+{
+  "name": "default",
+  "description": "商品の引当可能在庫を取得する",
+  "pathParams": {
+    "sku": "PEN-001"
+  },
+  "queryParams": {},
+  "headers": {},
+  "requestBody": null,
+  "expect": {
+    "status": 200,
+    "bodyMode": "subset",
+    "body": {
+      "available": 5,
+      "sku": "PEN-001"
+    },
+    "ignorePaths": []
+  }
+}

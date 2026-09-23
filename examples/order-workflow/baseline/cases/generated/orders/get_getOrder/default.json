@@ -1,0 +1,21 @@
+{
+  "name": "default",
+  "description": "注文の保存内容を取得する",
+  "pathParams": {
+    "orderId": "ORD-000001"
+  },
+  "queryParams": {},
+  "headers": {},
+  "requestBody": null,
+  "expect": {
+    "status": 200,
+    "bodyMode": "subset",
+    "body": {
+      "id": "ORD-000001",
+      "quantity": 2,
+      "sku": "PEN-001",
+      "status": "confirmed"
+    },
+    "ignorePaths": []
+  }
+}

@@ -1,0 +1,98 @@
+desc: ORD-005 数量不正を修正して注文し、取消まで確認する
+runners:
+  req:
+    endpoint: http://127.0.0.1:18081
+vars:
+  req_empty: json://../fixtures/requests/empty.json
+  req_order_0: json://../fixtures/requests/order-0.json
+  req_order_1: json://../fixtures/requests/order-1.json
+  res_cancelled_1: json://../fixtures/responses/cancelled-1.json
+  res_confirmed_1: json://../fixtures/responses/confirmed-1.json
+  res_invalid: json://../fixtures/responses/invalid.json
+  res_reset: json://../fixtures/responses/reset.json
+  res_stock_4: json://../fixtures/responses/stock-4.json
+  res_stock_5: json://../fixtures/responses/stock-5.json
+steps:
+  reset:
+    desc: 外部JSONを使って在庫5・注文0件に初期化する
+    req:
+      /test/reset:
+        post:
+          body:
+            application/json: "{{ vars.req_empty }}"
+    test: |
+      current.res.status == 200 &&
+      compare(current.res.body, vars.res_reset)
+  reject_zero:
+    desc: 数量0の外部JSONを送り、400とエラー本文を確認する
+    req:
+      /orders:
+        post:
+          body:
+            application/json: "{{ vars.req_order_0 }}"
+    test: |
+      current.res.status == 400 &&
+      compare(current.res.body, vars.res_invalid)
+  stock_unchanged:
+    desc: 不正な注文を拒否した後も在庫5を維持する
+    req:
+      /inventory/PEN-001:
+        get:
+          body: null
+    test: |
+      current.res.status == 200 &&
+      compare(current.res.body, vars.res_stock_5)
+  create_corrected:
+    desc: 数量1の外部JSONに切り替えて注文する
+    req:
+      /orders:
+        post:
+          body:
+            application/json: "{{ vars.req_order_1 }}"
+    test: |
+      current.res.status == 201 &&
+      current.res.body.id != "" &&
+      compare(current.res.body, vars.res_confirmed_1, [".id"])
+  save_order:
+    desc: 応答IDをorder_idに保存する
+    bind:
+      order_id: steps.create_corrected.res.body.id
+  stock_reserved:
+    desc: 訂正後の注文で在庫が4へ減ることを確認する
+    req:
+      /inventory/PEN-001:
+        get:
+          body: null
+    test: |
+      current.res.status == 200 &&
+      compare(current.res.body, vars.res_stock_4)
+  check_corrected:
+    desc: 訂正後の注文をIDで照会し、保存内容を照合する
+    req:
+      /orders/{{ order_id }}:
+        get:
+          body: null
+    test: |
+      current.res.status == 200 &&
+      current.res.body.id == order_id &&
+      compare(current.res.body, vars.res_confirmed_1, [".id"])
+  cancel_corrected:
+    desc: 訂正後の注文を取り消す
+    req:
+      /orders/{{ order_id }}/cancel:
+        post:
+          body:
+            application/json: "{{ vars.req_empty }}"
+    test: |
+      current.res.status == 200 &&
+      current.res.body.id == order_id &&
+      compare(current.res.body, vars.res_cancelled_1, [".id"])
+  stock_restored:
+    desc: 取消後に在庫5へ戻ったことを確認する
+    req:
+      /inventory/PEN-001:
+        get:
+          body: null
+    test: |
+      current.res.status == 200 &&
+      compare(current.res.body, vars.res_stock_5)

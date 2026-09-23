@@ -1,0 +1,3 @@
+## リクエストボディ
+
+{{< include ../../generated/order-lifecycle/request-json.qmd >}}
