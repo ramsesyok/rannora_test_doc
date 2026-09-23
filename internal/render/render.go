@@ -53,7 +53,7 @@ func renderScenario(scenario *model.Scenario) string {
 		detail := step.Description
 		switch step.Kind {
 		case model.StepHTTP:
-			detail += "\\\n@" + label(scenario.ID, "http") + " 手順 " + strconv.Itoa(step.Number)
+			detail += "\\\nURL：[@" + label(scenario.ID, "http") + "]-\\[" + strconv.Itoa(step.Number) + "\\]"
 			if step.HTTP.Body != nil {
 				requestReference = "@" + label(scenario.ID, "request", step.ID)
 			}
@@ -69,24 +69,51 @@ func renderScenario(scenario *model.Scenario) string {
 		case model.StepTest:
 			detail += "\\\n検証のみ"
 		}
+		if requestReference != "" {
+			requestReference = appendJSONFiles(requestReference, step.RequestJSONFiles)
+		}
 		status := ""
 		if step.Status.Value != "" {
-			status = "ステータス：" + step.Status.Protocol + " " + step.Status.Value
+			status = step.Status.Value
 		} else if step.Status.Variable != "" {
-			status = "ステータス：" + step.Status.Protocol + " " + step.Status.Variable
+			status = step.Status.Variable
+		}
+		if status != "" {
+			if step.Status.Protocol == "gRPC" {
+				status = "gRPC " + status
+			}
+			status = "期待値：\\[" + status + "\\]"
 		}
 		if step.Test != "" {
 			if status != "" {
-				status += "\\\n"
+				status += " "
+			} else {
+				status = "期待値："
 			}
-			status += "期待値：@" + label(scenario.ID, "expect", step.ID)
+			status += "@" + label(scenario.ID, "expect", step.ID)
 		}
+		status = appendJSONFiles(status, step.ExpectationJSONFiles)
 		rows = append(rows, []string{strconv.Itoa(step.Number), detail, requestReference, status, ""})
 	}
 	return generatedHeader(scenario) +
 		"::: {.landscape}\n" +
 		fmt.Sprintf("::: {.tbl caption=\"テストシナリオ\" label=\"%s\" widths=\"8,46,20,20,6\" breakable-rows=\"true\"}\n", label(scenario.ID, "scenario")) +
 		scenarioGrid(scenario.Name, rows, []int{8, 54, 24, 30, 8}, alignCenter, alignLeft, alignLeft, alignLeft, alignCenter) + ":::\n:::\n"
+}
+
+// Keep filenames literal (including underscores and brackets) in Markdown cells.
+func appendJSONFiles(reference string, paths []string) string {
+	seen := map[string]bool{}
+	for _, path := range paths {
+		name := filepath.Base(strings.ReplaceAll(path, `\`, "/"))
+		if seen[name] {
+			continue
+		}
+		seen[name] = true
+		name = strings.NewReplacer(`\`, `\\`, "_", `\_`, "*", `\*`, "[", `\[`, "]", `\]`, "`", "\\`").Replace(name)
+		reference += "\\\n" + name
+	}
+	return reference
 }
 
 func renderCases(scenario *model.Scenario) string {
@@ -172,6 +199,17 @@ func renderRequestData(scenario *model.Scenario, grpc bool) string {
 		headers := []string{"JSON path", "値"}
 		widthsAttr := "35,65"
 		widths := []int{34, 70}
+		if len(step.RequestJSONData) > 0 {
+			rows = [][]string{{"参照式", "$", compactJSON(value)}}
+			for _, asset := range step.RequestJSONData {
+				for _, row := range flattenRows(asset.Value) {
+					rows = append(rows, []string{filepath.Base(asset.Path), row[0], row[1]})
+				}
+			}
+			headers = []string{"出典", "JSON path", "値"}
+			widthsAttr = "25,30,45"
+			widths = []int{30, 34, 58}
+		}
 		if templateCaseReference(value) && len(scenario.Cases) > 0 {
 			rows = nil
 			for _, caseValue := range scenario.Cases {
@@ -190,8 +228,8 @@ func renderRequestData(scenario *model.Scenario, grpc bool) string {
 			widthsAttr = "18,32,50"
 			widths = []int{18, 34, 58}
 		}
-		blocks.WriteString(tableBlock(
-			fmt.Sprintf("%s（%s／手順 %d）", caption, scenario.Name, step.Number), label(scenario.ID, prefix, step.ID), widthsAttr,
+		blocks.WriteString(tableBlockWithMerge(
+			fmt.Sprintf("%s（%s／手順 %d）", caption, scenario.Name, step.Number), label(scenario.ID, prefix, step.ID), widthsAttr, !grpc,
 			headers, rows, widths))
 		blocks.WriteByte('\n')
 	}
@@ -207,9 +245,14 @@ func renderExpectations(scenario *model.Scenario) string {
 		if step.Test == "" {
 			continue
 		}
-		rows := [][]string{{"検証式", step.Test, sourceLocation(step.SourcePath, step.SourceLine)}}
+		rows := [][]string{{"検証式", sourceLocation(step.SourcePath, step.SourceLine), step.Test}}
 		if step.Status.Value != "" {
-			rows = append(rows, []string{"ステータス", step.Status.Protocol + " " + step.Status.Value, "検証式から抽出"})
+			rows = append(rows, []string{"ステータス", "検証式から抽出", step.Status.Protocol + " " + step.Status.Value})
+		}
+		for _, asset := range step.ExpectationJSONData {
+			for _, row := range flattenRows(asset.Value) {
+				rows = append(rows, []string{"参照JSON", filepath.Base(asset.Path), row[0] + ": " + row[1]})
+			}
 		}
 		if strings.Contains(step.Test, "vars.case.") {
 			for _, caseValue := range scenario.Cases {
@@ -219,13 +262,13 @@ func renderExpectations(scenario *model.Scenario) string {
 					if strings.Contains(step.Test, pathExpression) {
 						usage = "ケース定義（検証式参照）"
 					}
-					rows = append(rows, []string{"ケース " + caseValue.Name, expected[0] + ": " + expected[1], filepath.Base(caseValue.SourcePath) + "\\\n" + usage})
+					rows = append(rows, []string{"ケース " + caseValue.Name, filepath.Base(caseValue.SourcePath) + "\\\n" + usage, expected[0] + ": " + expected[1]})
 				}
 			}
 		}
-		blocks.WriteString(tableBlock(
-			fmt.Sprintf("期待値・検証条件（%s／手順 %d）", scenario.Name, step.Number), label(scenario.ID, "expect", step.ID), "18,62,20",
-			[]string{"区分", "内容", "出典"}, rows, []int{18, 72, 26}))
+		blocks.WriteString(tableBlockWithMerge(
+			fmt.Sprintf("期待値・検証条件（%s／手順 %d）", scenario.Name, step.Number), label(scenario.ID, "expect", step.ID), "18,20,62", true,
+			[]string{"区分", "出典", "内容"}, rows, []int{18, 26, 72}))
 		blocks.WriteByte('\n')
 	}
 	if blocks.Len() == 0 {
@@ -263,8 +306,16 @@ func captionWithScenario(caption, scenarioName string) string {
 }
 
 func tableBlock(caption, tableLabel, widthsAttr string, headers []string, rows [][]string, widths []int, alignments ...columnAlignment) string {
-	return fmt.Sprintf("::: {.landscape}\n::: {.tbl caption=\"%s\" label=\"%s\" widths=\"%s\" breakable-rows=\"true\"}\n%s:::\n:::\n",
-		caption, tableLabel, widthsAttr, gridTable(headers, rows, widths, alignments...))
+	return tableBlockWithMerge(caption, tableLabel, widthsAttr, false, headers, rows, widths, alignments...)
+}
+
+func tableBlockWithMerge(caption, tableLabel, widthsAttr string, mergeAll bool, headers []string, rows [][]string, widths []int, alignments ...columnAlignment) string {
+	mergeAttr := ""
+	if mergeAll {
+		mergeAttr = ` merge-cols="all"`
+	}
+	return fmt.Sprintf("::: {.landscape}\n::: {.tbl caption=\"%s\" label=\"%s\" widths=\"%s\"%s breakable-rows=\"true\"}\n%s:::\n:::\n",
+		caption, tableLabel, widthsAttr, mergeAttr, gridTable(headers, rows, widths, alignments...))
 }
 
 func generatedHeader(scenario *model.Scenario) string {
@@ -350,6 +401,10 @@ func flattenRows(value any) [][]string {
 func flatten(path string, value any, rows *[][]string) {
 	switch typed := value.(type) {
 	case map[string]any:
+		if len(typed) == 0 {
+			*rows = append(*rows, []string{path, "{}"})
+			return
+		}
 		keys := make([]string, 0, len(typed))
 		for key := range typed {
 			keys = append(keys, key)
@@ -359,6 +414,10 @@ func flatten(path string, value any, rows *[][]string) {
 			flatten(path+"."+key, typed[key], rows)
 		}
 	case []any:
+		if len(typed) == 0 {
+			*rows = append(*rows, []string{path, "[]"})
+			return
+		}
 		for i, item := range typed {
 			flatten(fmt.Sprintf("%s[%d]", path, i), item, rows)
 		}

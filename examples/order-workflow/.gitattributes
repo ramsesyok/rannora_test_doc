@@ -1,0 +1,8 @@
+# Keep input hashes stable across Windows and Unix checkouts.
+runbooks/*.yml text eol=lf
+fixtures/**/*.json text eol=lf
+config.yaml text eol=lf
+*.pdf binary
+# Preserve generated document spacing and verbatim execution reports.
+docs/generated/**/*.qmd whitespace=-blank-at-eof
+output/verification/*.txt -whitespace

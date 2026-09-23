@@ -1,0 +1,3 @@
+## HTTP呼び出し情報
+
+{{< include ../../generated/double-cancel/http.qmd >}}

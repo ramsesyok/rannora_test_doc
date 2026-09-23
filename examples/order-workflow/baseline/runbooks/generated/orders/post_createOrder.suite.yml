@@ -1,0 +1,21 @@
+desc: 注文を作成し、数量分の在庫を引き当てる suite
+labels:
+  - generated
+  - openapi
+  - orders
+  - method:post
+  - operation:createOrder
+  - mode:suite
+
+vars:
+  cases:
+    - json://../../../cases/generated/orders/post_createOrder/default.json
+
+steps:
+  run_case:
+    loop:
+      count: len(vars.cases)
+    include:
+      path: ./post_createOrder.template.yml
+      vars:
+        case: "{{ vars.cases[i] }}"

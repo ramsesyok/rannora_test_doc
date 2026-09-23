@@ -1,0 +1,38 @@
+{{< pagebreak >}}
+
+## 正常系の流れと値の引き継ぎ
+
+```text
+1 初期化 → 2 在庫5を取得 → 3 注文2個を作成（201、idを取得）
+                                  ↓
+                         4 idをorder_idに保存
+                                  ↓
+5 同じidの注文を照会 → 6 在庫3を確認 → 7 同じidをキャンセル
+                                             ↓
+                            8 取消状態を再照会 → 9 在庫5を確認
+```
+
+| 値 | 取得元 | 使用先 |
+|---|---|---|
+| `order_id` | `steps.create_order.res.body.id` | 注文照会と取消のURL、応答IDの一致確認 |
+| 初期在庫 | `steps.stock_before.res.body.available` | 引当後は初期在庫−2、取消後は初期在庫との一致を検証 |
+| 状態 | 各応答の `body.status` | 作成・初回照会ではconfirmed、取消・再照会ではcancelled |
+
+実行用YAMLのID保存部分は次のようになる。
+
+```yaml
+save_order_id:
+  desc: create_orderの応答body.idをorder_idに保存し、後続URLへ引き継ぐ
+  bind:
+    order_id: steps.create_order.res.body.id
+get_order:
+  desc: 保存したIDで注文を照会する
+  req:
+    /orders/{{ order_id }}:
+      get:
+        body: null
+```
+
+注文IDを `ORD-000001` と固定しない。採番値が実行ごとに変わっても、作成した注文を追跡できる。
+生成表では実行時の式をそのまま保持する。実測IDへ展開された値ではない。
+現行の変換ツールは `bind` の代入式を独立した詳細表に出さないため、上の対応表と元YAMLで確認する。

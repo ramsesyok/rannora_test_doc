@@ -1,0 +1,24 @@
+{
+  "generator": "runnora-instructions",
+  "scenario": "ORD-002 在庫不足時に在庫を変更しない",
+  "source": "runbooks/insufficient-stock.yml",
+  "sha256": "9d6ee0ab3ea04b5532c26673f0293664126c13dcc9acf77a1d3fe31830cef646",
+  "files": [
+    "expectations.qmd",
+    "http.qmd",
+    "request-json.qmd",
+    "scenario.qmd"
+  ],
+  "inputs": [
+    {
+      "kind": "runbook",
+      "path": "runbooks/insufficient-stock.yml",
+      "sha256": "9d6ee0ab3ea04b5532c26673f0293664126c13dcc9acf77a1d3fe31830cef646"
+    },
+    {
+      "kind": "config",
+      "path": "config.yaml",
+      "sha256": "9e0f8ec335a42aef52ca0133ed97908363e005aaca4caafaa07302b0300c7e07"
+    }
+  ]
+}

@@ -1,0 +1,16 @@
+## 準備
+
+Windows／PowerShell、Go、runnora実行ファイルを使用する。
+手順書の発行にはQuartoとddq 2.4.0を使用する。完成PDF・HTMLの閲覧だけならこれらのツールは不要である。
+PowerShellでサンプルのルート `examples/order-workflow` に移動する。
+
+```powershell
+# リポジトリのルートから
+Set-Location examples/order-workflow
+New-Item -ItemType Directory -Force bin | Out-Null
+go build -o bin/order-api.exe ./mock
+if ($LASTEXITCODE -ne 0) { throw 'サンプルAPIのビルド失敗' }
+```
+
+18081番ポートが未使用であることを確認する。APIとrunbookの接続先は同じ固定ポートである。
+`config.yaml` のOracle DSNは空、前後処理SQLは空配列である。

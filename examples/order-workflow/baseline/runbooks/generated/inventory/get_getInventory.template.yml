@@ -1,0 +1,24 @@
+desc: 商品の引当可能在庫を取得する template
+labels:
+  - generated
+  - openapi
+  - inventory
+  - method:get
+  - operation:getInventory
+  - mode:template
+
+runners:
+  req:
+    endpoint: ${RUNNORA_BASE_URL}
+
+vars:
+  case: {}
+
+steps:
+  call_api:
+    req:
+      /inventory/{{ vars.case.pathParams.sku }}:
+        get:
+          headers: "{{ vars.case.headers }}"
+    test: |
+      current.res.status == vars.case.expect.status

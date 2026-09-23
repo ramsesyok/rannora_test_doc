@@ -1,0 +1,13 @@
+# ORD-005 数量不正を修正して注文し、取消まで確認する {.landscape-chapter}
+
+数量0を400で拒否した後、数量1で注文をやり直す。在庫5→4→5と、訂正後の注文の保存・取消を確認する。
+
+期待JSONの注文本文には採番IDを含めない。`compare(..., [".id"])` でID以外を照合し、IDの存在・一致・注文間の違いは検証式で別に確認する。
+
+{{< include 01-scenario.qmd >}}
+
+{{< include 02-http.qmd >}}
+
+{{< include 03-request.qmd >}}
+
+{{< include 04-expectations.qmd >}}

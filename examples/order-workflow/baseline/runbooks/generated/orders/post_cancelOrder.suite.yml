@@ -1,0 +1,21 @@
+desc: 注文をキャンセルし、数量分の在庫を戻す suite
+labels:
+  - generated
+  - openapi
+  - orders
+  - method:post
+  - operation:cancelOrder
+  - mode:suite
+
+vars:
+  cases:
+    - json://../../../cases/generated/orders/post_cancelOrder/default.json
+
+steps:
+  run_case:
+    loop:
+      count: len(vars.cases)
+    include:
+      path: ./post_cancelOrder.template.yml
+      vars:
+        case: "{{ vars.cases[i] }}"

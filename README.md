@@ -8,6 +8,11 @@ API単体試験のファイル構成、正常系・異常系の作成、実行�
 - [Step by Step 詳細手順（HTML）](docs/tutorial/output/step-by-step.html)
 - [教材の使い方・完成例](docs/tutorial/README.md)
 
+## 複数ステップのサンプル
+
+- [注文・在庫連携APIのサンプル](examples/order-workflow/README.md)：注文IDの引き継ぎ、在庫の増減、在庫不足、二重キャンセル、外部JSONを使う売切後の再注文・入力訂正を確認する5シナリオ。
+- [テスト手順書（PDF）](examples/order-workflow/docs/design-doc.pdf) ／ [章別HTML](examples/order-workflow/docs/_book/index.html)：ddqで発行するQuarto book形式。実行用YAMLから生成した表と実施手順を確認できます。
+
 ## このツールについて
 
 runnora 用の runn シナリオを、レビュー用の Quarto `.qmd` 原稿へ変換する Go CLI です。
@@ -50,5 +55,12 @@ go run . generate `
 シナリオごとに `scenario.qmd`、`cases.qmd`、`http.qmd`、`grpc.qmd`、
 `request-json.qmd`、`grpc-request.qmd`、`expectations.qmd`、前後処理原稿を必要に応じて生成します。
 既存文書の章立てや `_quarto.yml` は変更しません。
+
+シナリオ表では、HTTP呼び出し情報を `URL：表 4.2-1-[1]`、期待値を
+`期待値：[200] 表 4.4-1` の形式で参照します（番号は配置先の章・節に従います）。
+リクエストボディ・期待値がケースJSONや `vars` の `json://...json` を参照する場合は、
+詳細表への参照の次行にJSONファイル名だけを追記します。複数ある場合は改行して列挙します。
+YAMLへの直接記述や、実行時にしか決まらないファイル名には追記しません。
+ステータス未指定時は値を補わず、ケースごとに異なる場合は `[ケース別]`、gRPCは `[gRPC 0]` 等で示します。
 
 設計判断と今後の検討事項は [docs/design-notes.md](docs/design-notes.md) を参照してください。

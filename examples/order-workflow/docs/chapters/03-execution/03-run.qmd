@@ -1,0 +1,29 @@
+## 5シナリオを実行する
+
+ターミナルBも同じサンプルフォルダへ移動し、次を実行する。
+
+```powershell
+# 既定では隣接するrunnoraリポジトリのrunnora.exeを使う
+./scripts/run.ps1
+
+# 配置が異なる場合は実行ファイルを明示する
+# ./scripts/run.ps1 -Runnora C:/tools/runnora.exe
+```
+
+スクリプトはORD-001〜005を順番に実行し、いずれかが非0終了なら停止する。
+各シナリオの成功は「期待どおり」を意味する。ORD-002とORD-003の409は期待した業務エラーなので、
+検証式が成立すればテストとしては成功となる。
+
+ORD-004・005では、外部JSONの期待本文と実際のレスポンスを比較する。
+入力エラーの400や売切時の409も期待どおりなら成功となる。
+
+1シナリオだけを実行する場合は次のようにする。
+
+```powershell
+$runnora = '../../../runnora/runnora.exe'
+& $runnora run --config config.yaml runbooks/order-lifecycle.yml
+if ($LASTEXITCODE -ne 0) { throw 'ORD-001失敗' }
+```
+
+成功時もHTTPステータスだけでは合格としない。本文のID・商品・数量・状態・在庫など、
+後掲の検証式が成立することを確認する。OpenAPIの全スキーマ制約を自動検証しているわけではない。

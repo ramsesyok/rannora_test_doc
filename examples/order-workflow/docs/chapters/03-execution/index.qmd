@@ -1,0 +1,13 @@
+# 実施手順
+
+{{< include 01-prepare.qmd >}}
+
+{{< include 02-start-api.qmd >}}
+
+{{< include 03-run.qmd >}}
+
+{{< include 04-evidence.qmd >}}
+
+{{< include 05-build-docs.qmd >}}
+
+{{< include 06-finish.qmd >}}

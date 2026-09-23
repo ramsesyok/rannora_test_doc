@@ -1,0 +1,21 @@
+desc: 商品の引当可能在庫を取得する suite
+labels:
+  - generated
+  - openapi
+  - inventory
+  - method:get
+  - operation:getInventory
+  - mode:suite
+
+vars:
+  cases:
+    - json://../../../cases/generated/inventory/get_getInventory/default.json
+
+steps:
+  run_case:
+    loop:
+      count: len(vars.cases)
+    include:
+      path: ./get_getInventory.template.yml
+      vars:
+        case: "{{ vars.cases[i] }}"

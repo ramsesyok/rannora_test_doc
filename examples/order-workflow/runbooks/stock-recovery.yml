@@ -1,0 +1,205 @@
+desc: ORD-004 複数注文で在庫を使い切り、取消後に再注文する
+runners:
+  req:
+    endpoint: http://127.0.0.1:18081
+vars:
+  req_empty: json://../fixtures/requests/empty.json
+  req_order_1: json://../fixtures/requests/order-1.json
+  req_order_2: json://../fixtures/requests/order-2.json
+  req_order_3: json://../fixtures/requests/order-3.json
+  res_cancelled_1: json://../fixtures/responses/cancelled-1.json
+  res_cancelled_2: json://../fixtures/responses/cancelled-2.json
+  res_cancelled_3: json://../fixtures/responses/cancelled-3.json
+  res_confirmed_1: json://../fixtures/responses/confirmed-1.json
+  res_confirmed_2: json://../fixtures/responses/confirmed-2.json
+  res_confirmed_3: json://../fixtures/responses/confirmed-3.json
+  res_insufficient: json://../fixtures/responses/insufficient.json
+  res_reset: json://../fixtures/responses/reset.json
+  res_stock_0: json://../fixtures/responses/stock-0.json
+  res_stock_1: json://../fixtures/responses/stock-1.json
+  res_stock_2: json://../fixtures/responses/stock-2.json
+  res_stock_3: json://../fixtures/responses/stock-3.json
+  res_stock_5: json://../fixtures/responses/stock-5.json
+steps:
+  reset:
+    desc: 外部JSONを使って在庫5・注文0件に初期化する
+    req:
+      /test/reset:
+        post:
+          body:
+            application/json: "{{ vars.req_empty }}"
+    test: |
+      current.res.status == 200 &&
+      compare(current.res.body, vars.res_reset)
+  create_a:
+    desc: 注文Aを2個作り、期待JSONとID以外の本文を照合する
+    req:
+      /orders:
+        post:
+          body:
+            application/json: "{{ vars.req_order_2 }}"
+    test: |
+      current.res.status == 201 &&
+      current.res.body.id != "" &&
+      compare(current.res.body, vars.res_confirmed_2, [".id"])
+  save_a:
+    desc: 応答IDをorder_aに保存する
+    bind:
+      order_a: steps.create_a.res.body.id
+  stock_after_a:
+    desc: 注文Aの引当後に在庫3を確認する
+    req:
+      /inventory/PEN-001:
+        get:
+          body: null
+    test: |
+      current.res.status == 200 &&
+      compare(current.res.body, vars.res_stock_3)
+  create_b:
+    desc: 注文Bを3個作り、注文Aと異なるIDを確認する
+    req:
+      /orders:
+        post:
+          body:
+            application/json: "{{ vars.req_order_3 }}"
+    test: |
+      current.res.status == 201 &&
+      current.res.body.id != "" && current.res.body.id != order_a &&
+      compare(current.res.body, vars.res_confirmed_3, [".id"])
+  save_b:
+    desc: 応答IDをorder_bに保存する
+    bind:
+      order_b: steps.create_b.res.body.id
+  sold_out:
+    desc: 2件の注文で在庫を使い切ったことを確認する
+    req:
+      /inventory/PEN-001:
+        get:
+          body: null
+    test: |
+      current.res.status == 200 &&
+      compare(current.res.body, vars.res_stock_0)
+  reject_extra:
+    desc: 売切中の追加注文1個を409で拒否する
+    req:
+      /orders:
+        post:
+          body:
+            application/json: "{{ vars.req_order_1 }}"
+    test: |
+      current.res.status == 409 &&
+      compare(current.res.body, vars.res_insufficient)
+  stock_after_rejection:
+    desc: 追加注文の拒否後も在庫0を維持する
+    req:
+      /inventory/PEN-001:
+        get:
+          body: null
+    test: |
+      current.res.status == 200 &&
+      compare(current.res.body, vars.res_stock_0)
+  cancel_a:
+    desc: 注文Aだけを取り消す
+    req:
+      /orders/{{ order_a }}/cancel:
+        post:
+          body:
+            application/json: "{{ vars.req_empty }}"
+    test: |
+      current.res.status == 200 &&
+      current.res.body.id == order_a &&
+      compare(current.res.body, vars.res_cancelled_2, [".id"])
+  stock_recovered:
+    desc: 注文Aの2個分だけ在庫が戻ることを確認する
+    req:
+      /inventory/PEN-001:
+        get:
+          body: null
+    test: |
+      current.res.status == 200 &&
+      compare(current.res.body, vars.res_stock_2)
+  check_b:
+    desc: 注文Aの取消後も注文Bは確定状態を維持する
+    req:
+      /orders/{{ order_b }}:
+        get:
+          body: null
+    test: |
+      current.res.status == 200 &&
+      current.res.body.id == order_b &&
+      compare(current.res.body, vars.res_confirmed_3, [".id"])
+  retry_order:
+    desc: 拒否された数量1を再注文し、新しいIDで成功する
+    req:
+      /orders:
+        post:
+          body:
+            application/json: "{{ vars.req_order_1 }}"
+    test: |
+      current.res.status == 201 &&
+      current.res.body.id != "" && current.res.body.id != order_a && current.res.body.id != order_b &&
+      compare(current.res.body, vars.res_confirmed_1, [".id"])
+  save_c:
+    desc: 応答IDをorder_cに保存する
+    bind:
+      order_c: steps.retry_order.res.body.id
+  stock_after_retry:
+    desc: 再注文の引当後に在庫1を確認する
+    req:
+      /inventory/PEN-001:
+        get:
+          body: null
+    test: |
+      current.res.status == 200 &&
+      compare(current.res.body, vars.res_stock_1)
+  check_a:
+    desc: 取消済みの注文Aを再照会する
+    req:
+      /orders/{{ order_a }}:
+        get:
+          body: null
+    test: |
+      current.res.status == 200 &&
+      current.res.body.id == order_a &&
+      compare(current.res.body, vars.res_cancelled_2, [".id"])
+  check_c:
+    desc: 再注文Cの保存内容を確認する
+    req:
+      /orders/{{ order_c }}:
+        get:
+          body: null
+    test: |
+      current.res.status == 200 &&
+      current.res.body.id == order_c &&
+      compare(current.res.body, vars.res_confirmed_1, [".id"])
+  cancel_b:
+    desc: 注文Bを取り消し、3個分を戻す
+    req:
+      /orders/{{ order_b }}/cancel:
+        post:
+          body:
+            application/json: "{{ vars.req_empty }}"
+    test: |
+      current.res.status == 200 &&
+      current.res.body.id == order_b &&
+      compare(current.res.body, vars.res_cancelled_3, [".id"])
+  cancel_c:
+    desc: 再注文Cも取り消し、1個分を戻す
+    req:
+      /orders/{{ order_c }}/cancel:
+        post:
+          body:
+            application/json: "{{ vars.req_empty }}"
+    test: |
+      current.res.status == 200 &&
+      current.res.body.id == order_c &&
+      compare(current.res.body, vars.res_cancelled_1, [".id"])
+  stock_restored:
+    desc: 全注文の取消後に在庫5へ復元したことを確認する
+    req:
+      /inventory/PEN-001:
+        get:
+          body: null
+    test: |
+      current.res.status == 200 &&
+      compare(current.res.body, vars.res_stock_5)

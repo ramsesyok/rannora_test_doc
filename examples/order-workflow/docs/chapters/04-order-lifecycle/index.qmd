@@ -1,0 +1,12 @@
+# ORD-001：生成された手順・詳細 {.landscape-chapter}
+
+前提：専用サンプルAPIが起動している。最初の手順で初期化する。
+合格条件：注文の内容とIDが一貫し、在庫が5→3→5、状態がconfirmed→cancelledになる。
+
+{{< include 01-scenario.qmd >}}
+
+{{< include 02-http.qmd >}}
+
+{{< include 03-request.qmd >}}
+
+{{< include 04-expectations.qmd >}}

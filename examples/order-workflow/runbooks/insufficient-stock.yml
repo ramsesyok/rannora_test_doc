@@ -1,0 +1,47 @@
+desc: ORD-002 在庫不足時に在庫を変更しない
+runners:
+  req:
+    endpoint: http://127.0.0.1:18081
+steps:
+  reset:
+    desc: サンプル専用APIで在庫5・注文0件に初期化する
+    req:
+      /test/reset:
+        post:
+          body:
+            application/json: {}
+    test: |
+      current.res.status == 200 &&
+      current.res.body.available == 5 &&
+      current.res.body.orderCount == 0
+  stock_before:
+    desc: 初期在庫が5個であることを確認する
+    req:
+      /inventory/PEN-001:
+        get:
+          body: null
+    test: |
+      current.res.status == 200 &&
+      current.res.body.sku == "PEN-001" &&
+      current.res.body.available == 5
+  reject_order:
+    desc: 在庫を超える6個を注文し、在庫不足エラーを確認する
+    req:
+      /orders:
+        post:
+          body:
+            application/json:
+              sku: PEN-001
+              quantity: 6
+    test: |
+      current.res.status == 409 &&
+      current.res.body.code == "INSUFFICIENT_STOCK"
+  stock_unchanged:
+    desc: 失敗した注文によって在庫が減っていないことを再照会して確認する
+    req:
+      /inventory/PEN-001:
+        get:
+          body: null
+    test: |
+      current.res.status == 200 &&
+      current.res.body.available == steps.stock_before.res.body.available

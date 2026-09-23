@@ -1,0 +1,12 @@
+# ORD-002：生成された手順・詳細 {.landscape-chapter}
+
+前提：初期化により在庫5。合格条件：数量6の注文が409となり、再照会でも在庫5を維持する。
+最後の再照会を省くと「エラーを返したのに在庫だけ減った」不具合を見逃す。
+
+{{< include 01-scenario.qmd >}}
+
+{{< include 02-http.qmd >}}
+
+{{< include 03-request.qmd >}}
+
+{{< include 04-expectations.qmd >}}

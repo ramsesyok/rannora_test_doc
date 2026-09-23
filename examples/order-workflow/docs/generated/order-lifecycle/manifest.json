@@ -1,0 +1,24 @@
+{
+  "generator": "runnora-instructions",
+  "scenario": "ORD-001 注文の作成からキャンセルまで",
+  "source": "runbooks/order-lifecycle.yml",
+  "sha256": "b658330204ae676b32ab778da653231718630f1a6de3d56214619cc29c6096a8",
+  "files": [
+    "expectations.qmd",
+    "http.qmd",
+    "request-json.qmd",
+    "scenario.qmd"
+  ],
+  "inputs": [
+    {
+      "kind": "runbook",
+      "path": "runbooks/order-lifecycle.yml",
+      "sha256": "b658330204ae676b32ab778da653231718630f1a6de3d56214619cc29c6096a8"
+    },
+    {
+      "kind": "config",
+      "path": "config.yaml",
+      "sha256": "9e0f8ec335a42aef52ca0133ed97908363e005aaca4caafaa07302b0300c7e07"
+    }
+  ]
+}

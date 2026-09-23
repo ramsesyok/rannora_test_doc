@@ -1,0 +1,37 @@
+## 手順書を再生成する
+
+```powershell
+./scripts/build-docs.ps1
+# 配置が異なる場合:
+# ./scripts/build-docs.ps1 `
+#   -Runnora C:/tools/runnora.exe `
+#   -Ddq C:/tools/quarto-template-2.4.0/ddq.exe
+# HTMLまたはPDFのみ発行する場合:
+# ./scripts/build-docs.ps1 -Format Html
+# ./scripts/build-docs.ps1 -Format Pdf
+```
+
+このスクリプトは、OpenAPIからbaselineを生成し、実行用runbookからQMDを生成した後、
+`ddq pdf docs`、`ddq html docs` の順でPDFとHTMLを発行する。APIの起動は不要。
+HTMLは `docs/_book/index.html`、PDFは `docs/design-doc.pdf` を開く。
+HTMLの配布は `_book/` 全体を対象とする。全文検索にはHTTPサーバからの閲覧が必要である。
+
+原稿だけを修正して再発行する場合は、サンプルのルートで次を実行する。
+
+```powershell
+$ddq = '../../../design-doc-quarto-template/cli/target/release/ddq.exe'
+& $ddq pdf docs
+if ($LASTEXITCODE -ne 0) { throw 'PDF発行失敗' }
+& $ddq html docs
+if ($LASTEXITCODE -ne 0) { throw 'HTML発行失敗' }
+```
+
+既定のddqパスは開発環境向けである。配布環境では展開したddq.exeのパスを指定する。
+ddq 2.4.0は形式ごとに `_book/` を作り直すため、両方残す場合はPDFを先に発行する。
+PDFは `docs/design-doc.pdf` に複写されるので、その後のHTML発行でも残る。
+`.template-version` と使用するddqの版・機構が異なる場合、ddqは停止する。
+更新時は `./scripts/build-docs.ps1 -UpdateTemplate` を指定して `ddq update docs` を実行し、機構ファイルの差分を確認する。
+`lib.typ`、`typst-*.typ`、`_quarto-publish.yml` はddqが配置する発行用ファイルなので手編集しない。
+
+生成された表は直接編集せず、`runbooks/` の説明・リクエスト・検証式を修正して再生成する。
+OpenAPIを変更した場合は業務runbookも手動で追随させる。

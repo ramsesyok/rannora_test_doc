@@ -1,0 +1,3 @@
+## リクエストボディ
+
+{{< include ../../generated/invalid-recovery/request-json.qmd >}}

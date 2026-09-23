@@ -131,6 +131,7 @@ func (l *loader) loadRunbook(path string) (*model.Scenario, error) {
 			addSource(scenario, model.SourceRef{Kind: "case", Path: caseValue.SourcePath, SHA256: caseValue.SourceHash})
 		}
 		resolveStatuses(scenario)
+		resolveJSONFiles(scenario, nil)
 		return scenario, nil
 	}
 
@@ -143,6 +144,10 @@ func (l *loader) loadRunbook(path string) (*model.Scenario, error) {
 		scenario.Cases = []model.Case{{ID: "default", Name: "default", SourcePath: abs, Data: map[string]any{}}}
 	}
 	resolveStatuses(scenario)
+	resolveJSONFiles(scenario, decodeAny(mappingValue(root, "vars")))
+	if err := loadJSONDetails(scenario, decodeAny(mappingValue(root, "vars"))); err != nil {
+		return nil, err
+	}
 	return scenario, nil
 }
 

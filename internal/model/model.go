@@ -15,18 +15,27 @@ type Scenario struct {
 }
 
 type Step struct {
-	Number      int
-	ID          string
-	Description string
-	Kind        StepKind
-	HTTP        *HTTPRequest
-	GRPC        *GRPCRequest
-	DBQuery     string
-	Bind        map[string]string
-	Test        string
-	Status      StatusExpectation
-	SourcePath  string
-	SourceLine  int
+	Number               int
+	ID                   string
+	Description          string
+	Kind                 StepKind
+	HTTP                 *HTTPRequest
+	GRPC                 *GRPCRequest
+	DBQuery              string
+	Bind                 map[string]string
+	Test                 string
+	Status               StatusExpectation
+	RequestJSONFiles     []string
+	ExpectationJSONFiles []string
+	RequestJSONData      []JSONData
+	ExpectationJSONData  []JSONData
+	SourcePath           string
+	SourceLine           int
+}
+
+type JSONData struct {
+	Path  string
+	Value any
 }
 
 type StepKind string

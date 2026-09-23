@@ -1,0 +1,199 @@
+openapi: 3.0.3
+info:
+  title: 注文・在庫連携API（ローカル教材）
+  version: 1.0.0
+  description: |
+    商品PEN-001の在庫を注文時に減算し、キャンセル時に戻す教材用API。
+    注文状態はconfirmedからcancelledに遷移する。取消済み注文の再取消は409。
+    在庫不足時は409で拒否し、在庫を変更しない。
+    業務シナリオの順序と初期データはrunbooksおよび手順書で定義する。
+servers:
+  - url: http://127.0.0.1:18081
+tags:
+  - name: inventory
+  - name: orders
+  - name: testSupport
+    description: ローカル教材の初期化専用。業務APIの試験範囲とは分けて扱う。
+paths:
+  /inventory/{sku}:
+    parameters:
+      - name: sku
+        in: path
+        required: true
+        schema:
+          type: string
+          enum: [PEN-001]
+        example: PEN-001
+    get:
+      tags: [inventory]
+      operationId: getInventory
+      summary: 商品の引当可能在庫を取得する
+      responses:
+        '200':
+          description: 引当可能在庫
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Inventory'
+              example: {sku: PEN-001, available: 5}
+  /orders:
+    post:
+      tags: [orders]
+      operationId: createOrder
+      summary: 注文を作成し、数量分の在庫を引き当てる
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CreateOrder'
+            example: {sku: PEN-001, quantity: 2}
+      responses:
+        '201':
+          description: 注文確定。在庫を数量分減算する。
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Order'
+              example: {id: ORD-000001, sku: PEN-001, quantity: 2, status: confirmed}
+        '400':
+          description: 不正な入力
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+              example: {code: INVALID_REQUEST}
+        '409':
+          description: 在庫不足。在庫は変更しない。
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+              example: {code: INSUFFICIENT_STOCK}
+  /orders/{orderId}:
+    parameters:
+      - $ref: '#/components/parameters/OrderId'
+    get:
+      tags: [orders]
+      operationId: getOrder
+      summary: 注文の保存内容を取得する
+      responses:
+        '200':
+          description: 指定した注文
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Order'
+              example: {id: ORD-000001, sku: PEN-001, quantity: 2, status: confirmed}
+        '404':
+          $ref: '#/components/responses/OrderNotFound'
+  /orders/{orderId}/cancel:
+    parameters:
+      - $ref: '#/components/parameters/OrderId'
+    post:
+      tags: [orders]
+      operationId: cancelOrder
+      summary: 注文をキャンセルし、数量分の在庫を戻す
+      requestBody:
+        $ref: '#/components/requestBodies/EmptyObject'
+      responses:
+        '200':
+          description: 注文取消。在庫を数量分加算する。
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Order'
+              example: {id: ORD-000001, sku: PEN-001, quantity: 2, status: cancelled}
+        '404':
+          $ref: '#/components/responses/OrderNotFound'
+        '409':
+          description: 既に取消済み。注文と在庫を変更しない。
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+              example: {code: ORDER_ALREADY_CANCELLED}
+  /test/reset:
+    post:
+      tags: [testSupport]
+      operationId: resetSample
+      summary: サンプルの在庫を5、注文を0件に戻す
+      requestBody:
+        $ref: '#/components/requestBodies/EmptyObject'
+      description: |
+        サンプル専用プロセスのメモリだけを初期化する。採番カウンタは維持する。
+        同じプロセスに対して複数シナリオを並列実行しないこと。
+      responses:
+        '200':
+          description: 初期化完了
+          content:
+            application/json:
+              schema:
+                type: object
+                additionalProperties: false
+                required: [sku, available, orderCount]
+                properties:
+                  sku: {type: string, enum: [PEN-001]}
+                  available: {type: integer, enum: [5]}
+                  orderCount: {type: integer, enum: [0]}
+              example: {sku: PEN-001, available: 5, orderCount: 0}
+components:
+  requestBodies:
+    EmptyObject:
+      description: 業務パラメータなし。実行用runbookでは空のJSONオブジェクトを送る。
+      required: false
+      content:
+        application/json:
+          schema:
+            type: object
+            additionalProperties: false
+          example: {}
+  parameters:
+    OrderId:
+      name: orderId
+      in: path
+      required: true
+      schema:
+        type: string
+        minLength: 1
+      example: ORD-000001
+  responses:
+    OrderNotFound:
+      description: 対象の注文が存在しない
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/Error'
+          example: {code: ORDER_NOT_FOUND}
+  schemas:
+    Inventory:
+      type: object
+      additionalProperties: false
+      required: [sku, available]
+      properties:
+        sku: {type: string, enum: [PEN-001]}
+        available: {type: integer, minimum: 0}
+    CreateOrder:
+      type: object
+      additionalProperties: false
+      required: [sku, quantity]
+      properties:
+        sku: {type: string, enum: [PEN-001]}
+        quantity: {type: integer, minimum: 1}
+    Order:
+      type: object
+      additionalProperties: false
+      required: [id, sku, quantity, status]
+      properties:
+        id: {type: string, minLength: 1}
+        sku: {type: string, enum: [PEN-001]}
+        quantity: {type: integer, minimum: 1}
+        status: {type: string, enum: [confirmed, cancelled]}
+    Error:
+      type: object
+      additionalProperties: false
+      required: [code]
+      properties:
+        code:
+          type: string
+          enum: [INVALID_REQUEST, INSUFFICIENT_STOCK, ORDER_NOT_FOUND, ORDER_ALREADY_CANCELLED]

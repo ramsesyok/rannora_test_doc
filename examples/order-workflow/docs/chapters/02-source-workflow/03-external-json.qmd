@@ -1,0 +1,35 @@
+{{< pagebreak >}}
+
+## 外部JSONを使う追加シナリオ
+
+ORD-004・005では、`fixtures/requests/` に送信するJSONを、`fixtures/responses/` に期待レスポンスを置く。
+元の3シナリオのYAML直接記述と見比べられる構成である。
+
+```yaml
+vars:
+  req_order_1: json://../fixtures/requests/order-1.json
+  res_confirmed_1: json://../fixtures/responses/confirmed-1.json
+```
+
+`json://` の相対パスはrunbookの配置場所が基準になる。
+本文には `application/json: "{{ vars.req_order_1 }}"` を指定する。
+期待JSONは実行前に用意した比較データであり、実測レスポンスを保存したものではない。
+
+```text
+ORD-004: Aを2個注文 → Bを3個注文 → 売切で追加注文409
+         → A取消で在庫2 → Bの確定状態を確認 → Cを1個再注文
+         → Aの取消状態とCの保存内容を確認
+         → BとCも取消 → 在庫5
+
+ORD-005: 数量0で400 → 在庫5を維持 → 数量1に訂正して201
+         → 保存したIDで照会 → 取消 → 在庫5
+```
+
+注文の期待JSONには `sku`・`quantity`・`status` を記載する。
+毎回変わるIDは `compare(current.res.body, vars.res_confirmed_1, [".id"])` の比較から除外し、
+空でないこと、保存したIDとの一致、他の注文と異なることを別の検証式で確認する。
+在庫・初期化・エラーの本文は除外なしで比較する。HTTPステータスも各ステップで検証する。
+
+手順書のシナリオ表にはファイル名を、本文・期待値の詳細表にはJSONの構造と値を載せる。
+比較対象の除外や条件は検証式を正として確認する。
+JSONを書き換えた場合は再実行と手順書の再生成が必要である。

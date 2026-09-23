@@ -1,0 +1,13 @@
+# ORD-004 複数注文で在庫を使い切り、取消後に再注文する {.landscape-chapter}
+
+外部JSONを入力・期待本文として使用する。注文A・B・CのIDを別々に保存し、在庫5→3→0→2→1→5と、注文同士の状態の独立性を確認する。
+
+期待JSONの注文本文には採番IDを含めない。`compare(..., [".id"])` でID以外を照合し、IDの存在・一致・注文間の違いは検証式で別に確認する。
+
+{{< include 01-scenario.qmd >}}
+
+{{< include 02-http.qmd >}}
+
+{{< include 03-request.qmd >}}
+
+{{< include 04-expectations.qmd >}}

@@ -1,0 +1,26 @@
+## ファイルの対応
+
+| ファイル／フォルダ（サンプルのルート基準） | 役割・確認ポイント |
+|---|---|
+| `openapi.yaml` | 4つの業務APIと初期化APIの入出力・応答契約 |
+| `baseline/runbooks/generated/` | OpenAPIから実際に生成したAPI単位のtemplateとsuite |
+| `baseline/cases/generated/` | 雛形に対応する入力と期待ステータス |
+| `runbooks/order-lifecycle.yml` | 正常系。API間の実行順と注文IDの引き継ぎを記述 |
+| `runbooks/insufficient-stock.yml` | 在庫不足の応答と、その後の在庫を確認 |
+| `runbooks/double-cancel.yml` | 同じIDで2回取消し、二重加算を検出 |
+| `runbooks/stock-recovery.yml` | 2件で売切、一部取消後に再注文する追加シナリオ |
+| `runbooks/invalid-recovery.yml` | 数量不正を拒否し、訂正して注文・取消する追加シナリオ |
+| `fixtures/requests/` | 追加シナリオが送信するJSON本文 |
+| `fixtures/responses/` | 追加シナリオが比較する期待JSON本文（実測値ではない） |
+| `docs/generated/` | 実行用runbookから生成した手順・HTTP・本文・検証式の表 |
+| `docs/index.qmd` | 採番しない前付け |
+| `docs/chapters/` | 章ごとのフォルダと、節ごとのQMD。生成表をincludeする |
+| `docs/_quarto.yml` | bookの章順・表題・発行設定 |
+| `docs/design-doc.pdf` | ddqで発行したPDF。横向きページ・表の分割・ページ番号を確認する |
+| `docs/_book/` | 章ごとのHTMLと共通アセット。配布時はフォルダ一式を渡す |
+| `reports/<日時>/` | 利用者が実行したときのレポート。版管理対象外 |
+
+`baseline` の生成物はAPIごとの出発点である。どのAPIをどの順で呼ぶか、
+初期在庫、注文数量、IDの引き継ぎ、取消前後の整合性はOpenAPIだけから自動で決まらない。
+本サンプルではそれらを `runbooks/` に記述し、`desc` に日本語の目的を付けている。
+作成済み注文IDを必要とするbaselineの照会・取消suiteは、そのままで一連の業務テストにはならない。

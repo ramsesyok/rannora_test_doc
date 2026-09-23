@@ -1,0 +1,22 @@
+{
+  "name": "default",
+  "description": "注文を作成し、数量分の在庫を引き当てる",
+  "pathParams": {},
+  "queryParams": {},
+  "headers": {},
+  "requestBody": {
+    "quantity": 2,
+    "sku": "PEN-001"
+  },
+  "expect": {
+    "status": 201,
+    "bodyMode": "subset",
+    "body": {
+      "id": "ORD-000001",
+      "quantity": 2,
+      "sku": "PEN-001",
+      "status": "confirmed"
+    },
+    "ignorePaths": []
+  }
+}

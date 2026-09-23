@@ -1,0 +1,46 @@
+project:
+  type: book
+  output-dir: _book
+  post-render:
+    - postprocess-html.js
+book:
+  title: 注文・在庫連携API テスト手順書
+  subtitle: OpenAPIから複数ステップのシナリオと手順書を作るサンプル
+  output-file: design-doc
+  chapters:
+    - index.qmd
+    - chapters/01-overview/index.qmd
+    - chapters/02-source-workflow/index.qmd
+    - chapters/03-execution/index.qmd
+    - chapters/04-order-lifecycle/index.qmd
+    - chapters/05-insufficient-stock/index.qmd
+    - chapters/06-double-cancel/index.qmd
+    - chapters/07-stock-recovery/index.qmd
+    - chapters/08-invalid-recovery/index.qmd
+    - chapters/09-records/index.qmd
+lang: ja
+from: markdown-smart
+doc-number: ""
+doc-revision: ""
+spec: false
+company-ja: ""
+company-en: ""
+cover: false
+page-start: 1
+pagebreak-level: 1
+toc: true
+toc-title: 目次
+toc-depth: 3
+number-sections: true
+format:
+  html:
+    embed-resources: false
+    css: [design-doc.css, sample.css]
+    code-overflow: wrap
+    grid:
+      body-width: 1400px
+      sidebar-width: 260px
+      margin-width: 40px
+filters:
+  - workflow-layout.lua
+  - design-doc.lua

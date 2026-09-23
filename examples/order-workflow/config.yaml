@@ -1,0 +1,11 @@
+app:
+  name: order-workflow-sample
+oracle:
+  driver: oracle
+  dsn: ""
+hooks:
+  common:
+    before: []
+    after: []
+report:
+  format: text

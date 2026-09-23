@@ -1,0 +1,9 @@
+{
+  "theme": "neutral",
+  "htmlLabels": false,
+  "flowchart": { "htmlLabels": false },
+  "class": { "htmlLabels": false },
+  "themeVariables": {
+    "fontFamily": "Noto Sans CJK JP, Yu Gothic, sans-serif"
+  }
+}

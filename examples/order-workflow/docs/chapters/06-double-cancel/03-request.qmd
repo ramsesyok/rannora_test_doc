@@ -1,0 +1,3 @@
+## リクエストボディ
+
+{{< include ../../generated/double-cancel/request-json.qmd >}}

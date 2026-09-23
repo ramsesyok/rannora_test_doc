@@ -1,0 +1,100 @@
+desc: ORD-001 注文の作成からキャンセルまで
+runners:
+  req:
+    endpoint: http://127.0.0.1:18081
+steps:
+  reset:
+    desc: サンプル専用APIで在庫5・注文0件に初期化する
+    req:
+      /test/reset:
+        post:
+          body:
+            application/json: {}
+    test: |
+      current.res.status == 200 &&
+      current.res.body.available == 5 &&
+      current.res.body.orderCount == 0
+  stock_before:
+    desc: 商品PEN-001の初期在庫が5個であることを確認する
+    req:
+      /inventory/PEN-001:
+        get:
+          body: null
+    test: |
+      current.res.status == 200 &&
+      current.res.body.sku == "PEN-001" &&
+      current.res.body.available == 5
+  create_order:
+    desc: 商品を2個注文し、採番されたID・商品・数量・確定状態を確認する
+    req:
+      /orders:
+        post:
+          body:
+            application/json:
+              sku: PEN-001
+              quantity: 2
+    test: |
+      current.res.status == 201 &&
+      current.res.body.id != "" &&
+      current.res.body.sku == "PEN-001" &&
+      current.res.body.quantity == 2 &&
+      current.res.body.status == "confirmed"
+  save_order_id:
+    desc: create_orderの応答body.idをorder_idに保存し、後続URLへ引き継ぐ
+    bind:
+      order_id: steps.create_order.res.body.id
+  get_order:
+    desc: 保存したIDで注文を照会し、作成内容が保持されていることを確認する
+    req:
+      /orders/{{ order_id }}:
+        get:
+          body: null
+    test: |
+      current.res.status == 200 &&
+      current.res.body.id == order_id &&
+      current.res.body.sku == "PEN-001" &&
+      current.res.body.quantity == 2 &&
+      current.res.body.status == "confirmed"
+  stock_reserved:
+    desc: 注文2個分の在庫が引き当てられ、5個から3個に減ったことを確認する
+    req:
+      /inventory/PEN-001:
+        get:
+          body: null
+    test: |
+      current.res.status == 200 &&
+      current.res.body.available == steps.stock_before.res.body.available - 2
+  cancel_order:
+    desc: 同じIDの注文をキャンセルし、取消状態になったことを確認する
+    req:
+      /orders/{{ order_id }}/cancel:
+        post:
+          body:
+            application/json: {}
+    test: |
+      current.res.status == 200 &&
+      current.res.body.id == order_id &&
+      current.res.body.sku == "PEN-001" &&
+      current.res.body.quantity == 2 &&
+      current.res.body.status == "cancelled"
+  get_cancelled:
+    desc: 再照会し、取消状態が保存されていることを確認する
+    req:
+      /orders/{{ order_id }}:
+        get:
+          body: null
+    test: |
+      current.res.status == 200 &&
+      current.res.body.id == order_id &&
+      current.res.body.sku == "PEN-001" &&
+      current.res.body.quantity == 2 &&
+      current.res.body.status == "cancelled"
+  stock_restored:
+    desc: キャンセルにより在庫が初期値5個に戻ったことを確認する
+    req:
+      /inventory/PEN-001:
+        get:
+          body: null
+    test: |
+      current.res.status == 200 &&
+      current.res.body.available == steps.stock_before.res.body.available
