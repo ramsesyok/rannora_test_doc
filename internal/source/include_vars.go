@@ -10,6 +10,7 @@ import (
 	"strings"
 
 	"github.com/ramsesyok/runnora-docgen/internal/model"
+	"gopkg.in/yaml.v3"
 )
 
 // includeVars holds the values an include step passes to its child runbook.
@@ -25,11 +26,12 @@ var (
 	embeddedVarPattern = regexp.MustCompile(`\{\{\s*(vars(?:\.[A-Za-z_][A-Za-z0-9_]*)+)\s*\}\}`)
 )
 
-func loadIncludeVars(raw any, childDir string) (includeVars, []model.SourceRef, error) {
+// vars は YAML に書かれた順に処理する。map で回すと出典 (manifest) の並びが実行ごとに変わるため。
+func loadIncludeVars(varsNode *yaml.Node, childDir string) (includeVars, []model.SourceRef, error) {
 	result := includeVars{values: map[string]any{}, files: map[string]string{}}
-	mapping, _ := raw.(map[string]any)
 	var sources []model.SourceRef
-	for name, value := range mapping {
+	for _, entry := range mappingEntries(varsNode) {
+		name, value := entry[0].Value, decodeAny(entry[1])
 		ref, ok := value.(string)
 		if !ok || !strings.HasPrefix(ref, "json://") || strings.ContainsAny(ref, "{}$") {
 			result.values[name] = value
