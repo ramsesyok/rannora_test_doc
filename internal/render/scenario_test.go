@@ -80,3 +80,20 @@ func TestHooksListFileNamesWithoutSQLBody(t *testing.T) {
 		t.Fatal("no hooks should render nothing")
 	}
 }
+
+func TestHTTPTableShowsQueryPerLine(t *testing.T) {
+	scenario := &model.Scenario{ID: "query", Steps: []model.Step{{
+		ID: "search", Number: 1, Kind: model.StepHTTP,
+		HTTP: &model.HTTPRequest{Endpoint: "http://example.test", Method: "GET", Path: "/books",
+			Query: "genre=NOVEL&availableOnly=", Headers: map[string]any{"X-Test-Case": "search"}},
+	}}}
+	got := renderHTTP(scenario)
+	for _, want := range []string{"http://example.test/books", `genre=NOVEL\`, "availableOnly=", `{"X-Test-Case":"search"}`} {
+		if !strings.Contains(got, want) {
+			t.Fatalf("missing %q:\n%s", want, got)
+		}
+	}
+	if strings.Contains(got, "/books?") {
+		t.Fatalf("query must not stay in the URL column:\n%s", got)
+	}
+}

@@ -145,7 +145,7 @@ func renderHTTP(scenario *model.Scenario) string {
 		}
 		rows = append(rows, []string{
 			strconv.Itoa(step.Number), step.HTTP.Method,
-			joinURL(step.HTTP.Endpoint, step.HTTP.Path), compactJSON(step.HTTP.Headers), compactJSON(step.HTTP.Query),
+			joinURL(step.HTTP.Endpoint, step.HTTP.Path), compactJSON(step.HTTP.Headers), queryCell(step.HTTP.Query),
 		})
 	}
 	if len(rows) == 0 {
@@ -377,6 +377,22 @@ func joinURL(endpoint, path string) string {
 		return path
 	}
 	return strings.TrimRight(endpoint, "/") + "/" + strings.TrimLeft(path, "/")
+}
+
+// queryCell は URL から取り出したクエリ文字列を「名前=値」の 1 行ずつに分けて示す。
+// 文字列以外 (旧来の query 指定) は JSON で示す。
+func queryCell(value any) string {
+	query, ok := value.(string)
+	if !ok {
+		return compactJSON(value)
+	}
+	var lines []string
+	for _, pair := range strings.Split(query, "&") {
+		if pair != "" {
+			lines = append(lines, pair)
+		}
+	}
+	return strings.Join(lines, "\\\n")
 }
 
 func compactJSON(value any) string {

@@ -310,6 +310,12 @@ func parseHTTP(runner runnerInfo, operation *yaml.Node) *model.HTTPRequest {
 		return req
 	}
 	req.Path = entries[0][0].Value
+	// runn の HTTP ステップには query 欄がなく、クエリは URL に直接書く。
+	// 手順書では URL と分けて示すため、? 以降をクエリ文字列として取り出す。
+	if path, query, found := strings.Cut(req.Path, "?"); found {
+		req.Path = path
+		req.Query = query
+	}
 	methods := mappingEntries(entries[0][1])
 	if len(methods) == 0 {
 		return req
@@ -317,7 +323,9 @@ func parseHTTP(runner runnerInfo, operation *yaml.Node) *model.HTTPRequest {
 	req.Method = strings.ToUpper(methods[0][0].Value)
 	config := methods[0][1]
 	req.Headers = decodeAny(mappingValue(config, "headers"))
-	req.Query = decodeAny(mappingValue(config, "query"))
+	if query := mappingValue(config, "query"); query != nil {
+		req.Query = decodeAny(query)
+	}
 	if body := mappingValue(config, "body"); body != nil {
 		bodyEntries := mappingEntries(body)
 		if len(bodyEntries) > 0 && strings.Contains(bodyEntries[0][0].Value, "/") {

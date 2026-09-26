@@ -201,8 +201,8 @@ sha256: 3b14c1569a47c4e812ab46fc11d05c20b92c332aa42c829a63609b73564670e9
 | 区分               | 出典                       | 内容                                                                     |
 +====================+============================+==========================================================================+
 | 検証式             | stock-recovery.yml:132     | current.res.status == 201 &&                                             |
-|                    |                            | current.res.body.id != "" && current.res.body.id != order_a && current.r |
-|                    |                            | es.body.id != order_b &&                                                 |
+|                    |                            | current.res.body.id != "" && current.res.body.id != order_a &&           |
+|                    |                            | current.res.body.id != order_b &&                                        |
 |                    |                            | compare(current.res.body, vars.res_confirmed_1, [".id"])                 |
 |                    |                            |                                                                          |
 +--------------------+----------------------------+--------------------------------------------------------------------------+

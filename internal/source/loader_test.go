@@ -152,3 +152,39 @@ func writeTestFile(t *testing.T, path, content string) {
 		t.Fatal(err)
 	}
 }
+
+func TestLoadSplitsQueryFromHTTPPath(t *testing.T) {
+	dir := t.TempDir()
+	writeTestFile(t, filepath.Join(dir, "runbook.yml"), `desc: search
+runners:
+  req:
+    endpoint: http://example.test
+steps:
+  search:
+    req:
+      /books?genre=NOVEL&availableOnly=true:
+        get:
+          headers:
+            X-Test-Scenario: LIB-000
+          body: null
+  plain:
+    req:
+      /books/B0001:
+        get:
+          body: null
+`)
+	scenario, _, err := Load(filepath.Join(dir, "runbook.yml"), Options{})
+	if err != nil {
+		t.Fatal(err)
+	}
+	search, plain := scenario.Steps[0].HTTP, scenario.Steps[1].HTTP
+	if search.Path != "/books" || search.Query != "genre=NOVEL&availableOnly=true" {
+		t.Fatalf("search path/query = %q / %#v", search.Path, search.Query)
+	}
+	if headers, ok := search.Headers.(map[string]any); !ok || headers["X-Test-Scenario"] != "LIB-000" {
+		t.Fatalf("headers = %#v", search.Headers)
+	}
+	if plain.Path != "/books/B0001" || plain.Query != nil {
+		t.Fatalf("plain path/query = %q / %#v", plain.Path, plain.Query)
+	}
+}
