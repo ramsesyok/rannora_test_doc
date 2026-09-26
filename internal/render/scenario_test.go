@@ -50,3 +50,33 @@ func TestScenarioExpectationWithoutLiteralStatus(t *testing.T) {
 		})
 	}
 }
+
+func TestHooksListFileNamesWithoutSQLBody(t *testing.T) {
+	scenario := &model.Scenario{
+		ID: "hooks", Name: "前後処理",
+		BeforeHooks: []model.Asset{
+			{Path: "sql/common/00_reset.sql", Content: "BEGIN\n  DELETE FROM loans;\nEND;"},
+			{Path: "sql/cases/setup.sql", Content: "BEGIN NULL; END;"},
+		},
+		AfterHooks: []model.Asset{{Path: "sql/common/90_verify.sql", Content: "BEGIN NULL; END;"}},
+	}
+	before := renderHooks(scenario, true)
+	for _, want := range []string{"順序", "ファイル", "出典", "00_reset.sql", "sql/common/00_reset.sql", "setup.sql", "sql/cases/setup.sql"} {
+		if !strings.Contains(before, want) {
+			t.Fatalf("missing %q:\n%s", want, before)
+		}
+	}
+	if strings.Contains(before, "SQL/PLSQL") || strings.Contains(before, "DELETE FROM") || strings.Contains(before, "BEGIN") {
+		t.Fatalf("SQL body must not be rendered:\n%s", before)
+	}
+	if strings.Index(before, "00_reset.sql") > strings.Index(before, "setup.sql") {
+		t.Fatalf("hooks must keep execution order:\n%s", before)
+	}
+	after := renderHooks(scenario, false)
+	if !strings.Contains(after, "90_verify.sql") || strings.Contains(after, "BEGIN") {
+		t.Fatalf("unexpected after hooks table:\n%s", after)
+	}
+	if renderHooks(&model.Scenario{ID: "empty"}, true) != "" {
+		t.Fatal("no hooks should render nothing")
+	}
+}

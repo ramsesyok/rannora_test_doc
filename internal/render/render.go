@@ -289,13 +289,14 @@ func renderHooks(scenario *model.Scenario, before bool) string {
 	if len(assets) == 0 {
 		return ""
 	}
+	// SQL 本文は載せない。表が大きくなり読みにくいため、実行順とファイルだけを示し、本文は出典のファイルを参照させる。
 	rows := make([][]string, 0, len(assets))
 	for i, asset := range assets {
-		rows = append(rows, []string{strconv.Itoa(i + 1), filepath.Base(asset.Path), strings.TrimSpace(asset.Content), asset.Path})
+		rows = append(rows, []string{strconv.Itoa(i + 1), filepath.Base(asset.Path), asset.Path})
 	}
 	return generatedHeader(scenario) + tableBlock(
-		captionWithScenario(caption, scenario.Name), label(scenario.ID, labelPart), "8,20,52,20",
-		[]string{"順序", "ファイル", "SQL/PLSQL", "出典"}, rows, []int{6, 24, 70, 34})
+		captionWithScenario(caption, scenario.Name), label(scenario.ID, labelPart), "10,30,60",
+		[]string{"順序", "ファイル", "出典"}, rows, []int{6, 30, 60})
 }
 
 func captionWithScenario(caption, scenarioName string) string {

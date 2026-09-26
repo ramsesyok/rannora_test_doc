@@ -67,8 +67,8 @@ gRPC の RPC 種別を判別するため、利用可能なローカルの `.prot
 generated/<対象ID>/
 ├── scenario.qmd       シナリオ概要、共通手順、条件、詳細への参照
 ├── cases.qmd          ケースデータ一覧、入力と期待値への参照
-├── before.qmd         前処理の順序、SQL/PLSQL
-├── after.qmd          後処理の順序、SQL/PLSQL
+├── before.qmd         前処理の順序と SQL/PLSQL ファイル名（本文は載せない）
+├── after.qmd          後処理の順序と SQL/PLSQL ファイル名（本文は載せない）
 ├── http.qmd           HTTP メソッド、URL、ヘッダ等
 ├── grpc.qmd           gRPC 接続先、サービス、メソッド、RPC 種別等
 ├── request-json.qmd   リクエスト JSON の詳細
