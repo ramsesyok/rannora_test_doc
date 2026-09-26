@@ -60,3 +60,32 @@ func TestGridTableRendersColumnAlignments(t *testing.T) {
 		t.Fatalf("alignment border is missing:\n%s", table)
 	}
 }
+
+func TestWrapKeepsHalfWidthWordsTogether(t *testing.T) {
+	// Pandoc joins grid-table cell lines with a space, so a split word would read "tech_a vailable".
+	lines := wrapCell(`{"X-Test-Case":"listBooks/tech_available"} 02\_member\_suspended.json`, 20)
+	joined := strings.Join(lines, "\n")
+	for _, word := range []string{`{"X-Test-Case":"listBooks/tech_available"}`, `02\_member\_suspended.json`} {
+		if !strings.Contains(joined, word) {
+			t.Fatalf("word %q was split: %q", word, lines)
+		}
+	}
+	// Full-width text may still wrap per character.
+	if got := wrapCell("貸出可能冊数が1減っていることを確認する", 10); len(got) < 2 {
+		t.Fatalf("full-width text should wrap: %q", got)
+	}
+}
+
+func TestGridTableWidensColumnForLongWord(t *testing.T) {
+	word := "fixtures/responses/createLoan/createLoan_member_suspended.json"
+	table := gridTable([]string{"No", "File"}, [][]string{{"1", word}}, []int{4, 10})
+	if !strings.Contains(table, word) {
+		t.Fatalf("long word should stay on one line:\n%s", table)
+	}
+	lines := strings.Split(strings.TrimSpace(table), "\n")
+	for _, line := range lines[1:] {
+		if displayWidth(line) != displayWidth(lines[0]) {
+			t.Fatalf("grid lines must have the same width:\n%s", table)
+		}
+	}
+}

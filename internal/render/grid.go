@@ -17,6 +17,7 @@ const (
 // gridTable renders a regular Pandoc grid table. Widths are display columns,
 // not byte lengths. Multi-line cell text is wrapped to its column width.
 func gridTable(headers []string, rows [][]string, widths []int, alignments ...columnAlignment) string {
+	widths = fitWidths(widths, append([][]string{headers}, rows...))
 	var b strings.Builder
 	border := fullBorder(widths, '-')
 	b.WriteString(border)
@@ -36,6 +37,7 @@ func gridTable(headers []string, rows [][]string, widths []int, alignments ...co
 // table. It intentionally does not use merge-cols because the table contains
 // both horizontal and vertical manual spans.
 func scenarioGrid(name string, rows [][]string, widths []int, alignments ...columnAlignment) string {
+	widths = fitWidths(widths, rows)
 	var b strings.Builder
 	b.WriteString(fullBorder(widths, '-'))
 	b.WriteByte('\n')
@@ -184,24 +186,73 @@ func wrapCell(value string, width int) []string {
 	return result
 }
 
+// wrapPlainLine は列幅で折り返す。Pandoc はセル内の改行を空白として連結するため、
+// 空白を含まない英数字の並び (ヘッダ値・ファイル名・JSON など) は途中で切らずに次の行へ送る。
+// 1 語で列幅を超える場合はその行だけ列幅を超え、fitWidths が列を広げる。
+// 全角文字は連結時に空白が入らないため、1 文字ずつ折り返してよい。
 func wrapPlainLine(sourceLine string, width int) []string {
 	var result []string
 	if sourceLine == "" {
 		return []string{""}
 	}
+	tokens := lineTokens(sourceLine)
 	line := ""
 	lineWidth := 0
-	for _, r := range sourceLine {
-		rw := runeWidth(r)
-		if lineWidth+rw > width && line != "" {
+	for i, token := range tokens {
+		tw := displayWidth(token)
+		// 行末の強制改行 () は直前の語から離さない
+		lastBreak := i == len(tokens)-1 && token == "\\"
+		if lineWidth+tw > width && line != "" && !lastBreak {
 			result = append(result, line)
 			line = ""
 			lineWidth = 0
+			if token == " " {
+				continue
+			}
 		}
-		line += string(r)
-		lineWidth += rw
+		line += token
+		lineWidth += tw
 	}
 	result = append(result, line)
+	return result
+}
+
+// lineTokens は折り返しの単位に分ける。空白を含まない半角の並びは 1 単位、
+// 空白と全角文字は 1 文字ずつの単位にする。
+func lineTokens(value string) []string {
+	var tokens []string
+	word := ""
+	for _, r := range value {
+		if r != ' ' && runeWidth(r) == 1 {
+			word += string(r)
+			continue
+		}
+		if word != "" {
+			tokens = append(tokens, word)
+			word = ""
+		}
+		tokens = append(tokens, string(r))
+	}
+	if word != "" {
+		tokens = append(tokens, word)
+	}
+	return tokens
+}
+
+// fitWidths は、1 語で列幅を超えるセルがある列の幅をその語が収まるまで広げる。
+// 表示上の列幅は .tbl の widths 属性で決まるため、ここで広げても見た目の比率は変わらない。
+func fitWidths(widths []int, rows [][]string) []int {
+	result := append([]int(nil), widths...)
+	for _, row := range rows {
+		for i, cell := range row {
+			if i >= len(result) {
+				break
+			}
+			for _, line := range wrapCell(cell, widths[i]) {
+				result[i] = max(result[i], displayWidth(line))
+			}
+		}
+	}
 	return result
 }
 

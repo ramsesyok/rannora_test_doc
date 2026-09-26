@@ -81,8 +81,11 @@ steps:
 	if found.Description != "Registered user" || missing.Description != "call_api" {
 		t.Fatalf("descriptions = %q, %q", found.Description, missing.Description)
 	}
-	if found.HTTP.Path != "/users/U1?mode=full" || missing.HTTP.Path != "/users/U9?mode=full" {
+	if found.HTTP.Path != "/users/U1" || missing.HTTP.Path != "/users/U9" {
 		t.Fatalf("paths = %q, %q", found.HTTP.Path, missing.HTTP.Path)
+	}
+	if found.HTTP.Query != "mode=full" {
+		t.Fatalf("query = %#v", found.HTTP.Query)
 	}
 	if body, ok := found.HTTP.Body.(map[string]any); !ok || body["name"] != "Alice" {
 		t.Fatalf("body = %#v", found.HTTP.Body)
