@@ -28,6 +28,9 @@ type loader struct {
 	opts     Options
 	stack    map[string]bool
 	warnings []string
+	// includeSources は include したファイル (template と vars の json://) の出典。
+	// 取り込んだ runbook の Sources に加える。
+	includeSources []model.SourceRef
 }
 
 type runnerInfo struct {
@@ -135,11 +138,16 @@ func (l *loader) loadRunbook(path string) (*model.Scenario, error) {
 		return scenario, nil
 	}
 
+	sourceStart := len(l.includeSources)
 	steps, err := l.parseSteps(root, abs, runners, protoTypes)
 	if err != nil {
 		return nil, err
 	}
 	scenario.Steps = steps
+	for _, ref := range l.includeSources[sourceStart:] {
+		addSource(scenario, ref)
+	}
+	l.includeSources = l.includeSources[:sourceStart]
 	if len(scenario.Cases) == 0 {
 		scenario.Cases = []model.Case{{ID: "default", Name: "default", SourcePath: abs, Data: map[string]any{}}}
 	}
@@ -218,12 +226,24 @@ func (l *loader) parseSteps(root *yaml.Node, sourcePath string, runners []runner
 				l.warnings = append(l.warnings, fmt.Sprintf("include.path がありません: %s:%d", sourcePath, item.node.Line))
 				continue
 			}
-			child, err := l.loadRunbook(resolveReference(filepath.Dir(sourcePath), path))
+			childPath := resolveReference(filepath.Dir(sourcePath), path)
+			child, err := l.loadRunbook(childPath)
 			if err != nil {
 				return nil, err
 			}
+			vars, varSources, err := loadIncludeVars(decodeAny(mappingValue(include, "vars")), filepath.Dir(childPath))
+			if err != nil {
+				return nil, err
+			}
+			l.includeSources = append(l.includeSources, append(child.Sources, varSources...)...)
+			includeDesc := scalar(mappingValue(item.node, "desc"))
 			for _, childStep := range child.Steps {
 				childStep.ID = item.id + "." + childStep.ID
+				// 1 ステップだけの template はケースの呼び出しそのものなので、include 側の説明を手順名にする
+				if includeDesc != "" && len(child.Steps) == 1 {
+					childStep.Description = includeDesc
+				}
+				vars.apply(&childStep)
 				result = append(result, childStep)
 			}
 			continue
