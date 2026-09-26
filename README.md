@@ -61,6 +61,7 @@ go build -o runnora-docgen.exe .
 
 シナリオごとに `scenario.qmd`、`cases.qmd`、`http.qmd`、`grpc.qmd`、
 `request-json.qmd`、`grpc-request.qmd`、`expectations.qmd`、前後処理原稿を必要に応じて生成します。
+前後処理原稿（`before.qmd`・`after.qmd`）は実行順・ファイル名・出典パスの表で、SQL 本文は掲載しません（表が大きくなり読みにくいため。本文は出典のファイルを参照）。
 既存文書の章立てや `_quarto.yml` は変更しません。
 
 シナリオ表では、HTTP呼び出し情報を `URL：表 4.2-1-[1]`、期待値を
