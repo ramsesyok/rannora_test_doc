@@ -3,6 +3,7 @@ package source
 import (
 	"os"
 	"path/filepath"
+	"strings"
 	"testing"
 
 	"github.com/ramsesyok/runnora-docgen/internal/model"
@@ -162,4 +163,51 @@ func writeNestedFile(t *testing.T, path, content string) {
 		t.Fatal(err)
 	}
 	writeTestFile(t, path, content)
+}
+
+func TestLoadIncludeVarsKeepsDeclaredOrderInSources(t *testing.T) {
+	dir := t.TempDir()
+	// Declared order differs from alphabetical order on purpose.
+	writeTestFile(t, filepath.Join(dir, "suite.yml"), `desc: suite
+steps:
+  one:
+    include:
+      path: template.yml
+      vars:
+        zeta: json://z.json
+        alpha: json://a.json
+        mid: json://m.json
+`)
+	writeTestFile(t, filepath.Join(dir, "template.yml"), `desc: template
+steps:
+  check:
+    test: vars.zeta.ok && vars.alpha.ok && vars.mid.ok
+`)
+	for _, name := range []string{"z.json", "a.json", "m.json"} {
+		writeTestFile(t, filepath.Join(dir, name), `{"ok": true}`)
+	}
+	want := []string{"z.json", "a.json", "m.json"}
+	// Map iteration order is random, so repeat to catch unstable output.
+	for i := 0; i < 20; i++ {
+		scenario, _, err := Load(filepath.Join(dir, "suite.yml"), Options{})
+		if err != nil {
+			t.Fatal(err)
+		}
+		var got []string
+		for _, ref := range scenario.Sources {
+			if ref.Kind == "json" {
+				got = append(got, filepath.Base(ref.Path))
+			}
+		}
+		if strings.Join(got, ",") != strings.Join(want, ",") {
+			t.Fatalf("run %d: json sources = %v, want %v", i, got, want)
+		}
+		var files []string
+		for _, path := range scenario.Steps[0].ExpectationJSONFiles {
+			files = append(files, filepath.Base(path))
+		}
+		if strings.Join(files, ",") != strings.Join(want, ",") {
+			t.Fatalf("run %d: expectation files = %v, want %v", i, files, want)
+		}
+	}
 }

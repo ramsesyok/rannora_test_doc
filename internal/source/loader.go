@@ -231,7 +231,7 @@ func (l *loader) parseSteps(root *yaml.Node, sourcePath string, runners []runner
 			if err != nil {
 				return nil, err
 			}
-			vars, varSources, err := loadIncludeVars(decodeAny(mappingValue(include, "vars")), filepath.Dir(childPath))
+			vars, varSources, err := loadIncludeVars(mappingValue(include, "vars"), filepath.Dir(childPath))
 			if err != nil {
 				return nil, err
 			}
