@@ -84,6 +84,24 @@ C:\tools\runnora-docgen.exe generate --env unit --out docs\generated\one runbook
 前後処理原稿（`before.qmd`・`after.qmd`）は実行順・ファイル名・出典パスの表で、SQL 本文は掲載しません（表が大きくなり読みにくいため。本文は出典のファイルを参照）。
 既存文書の章立てや `_quarto.yml` は変更しません。
 
+シナリオごとの `manifest.json` には、入力ファイルと SHA-256 のほか、runnora の実行結果と突き合わせるための次の項目を書きます。
+
+```json
+{
+  "scenario": "LIB-001 本を借りて返すまでの正常系",
+  "scenarioId": "LIB-001",
+  "steps": [
+    { "number": 1, "key": "member_before" },
+    { "number": 15, "key": "member_loans", "loop": true },
+    { "number": 16, "key": "inspect.call", "loop": true }
+  ]
+}
+```
+
+- `scenarioId` は runbook の `runnora:` ブロックの `id`（ブロックがなければ省きます）。runnora の `report.json` の `results[].id` と同じです。
+- `steps` は手順表の手順番号（`number`）と、runnora のステップのキー（`key`）の対応です。キーは `report.json` の `steps[].key` と同じで、include 先のステップは呼び出したステップのキーと `.` でつなぎます（suite が template を呼ぶ場合は `run_case.call_api` など）。`steps` が配列で書かれた runbook では 0 始まりの添字です。
+- 自身か呼び出したステップに `loop` があるステップは `loop: true` です。手順表では 1 行ですが、runnora の証跡は回ごと（`member_loans[0]`、`member_loans[1]` …）に分かれます。
+
 include ステップの `vars` に `json://` で渡したファイルは、runn と同じく include 先 runbook の位置を基準に読み込みます。
 include 先の URL・ヘッダ・リクエストボディにある `{{ vars.xxx }}` を実際の値に置き換え、
 検証式の期待ステータス（例：`vars.case.expect.status`）を求め、参照しているファイル名を手順表に追記します。
