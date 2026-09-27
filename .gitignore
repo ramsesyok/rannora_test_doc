@@ -3,3 +3,5 @@
 /generated/
 /tmp/
 /*.exe
+# goreleaser の出力
+/dist/

@@ -1,6 +1,7 @@
 package render
 
 import (
+	"path/filepath"
 	"strings"
 	"testing"
 )
@@ -41,7 +42,7 @@ func TestGridTableDoesNotSplitTableReference(t *testing.T) {
 }
 
 func TestSourceLocationBreaksLongTemplateName(t *testing.T) {
-	got := sourceLocation(`C:\runbooks\post_updatePetWithForm.template.yml`, 19)
+	got := sourceLocation(filepath.Join("runbooks", "post_updatePetWithForm.template.yml"), 19)
 	want := "post_\\\nupdatePet\\\nWithForm\\\n.template.yml:19"
 	if got != want {
 		t.Fatalf("sourceLocation = %q, want %q", got, want)

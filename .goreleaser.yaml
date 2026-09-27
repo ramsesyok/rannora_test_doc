@@ -1,0 +1,49 @@
+version: 2
+
+project_name: runnora-docgen
+
+builds:
+  - id: runnora-docgen
+    main: .
+    binary: runnora-docgen
+    env:
+      - CGO_ENABLED=0
+    goos: [linux, darwin, windows]
+    goarch: [amd64, arm64]
+    flags:
+      - -trimpath
+    ldflags:
+      - -s -w -X github.com/ramsesyok/runnora-docgen/cmd.Version=v{{ .Version }}
+
+archives:
+  - formats: [tar.gz]
+    format_overrides:
+      - goos: windows
+        formats: [zip]
+    name_template: "{{ .ProjectName }}_v{{ .Version }}_{{ .Os }}_{{ .Arch }}"
+    files:
+      - README.md
+
+checksum:
+  name_template: checksums.txt
+
+changelog:
+  use: github
+  sort: asc
+  groups:
+    - title: Dependencies
+      regexp: '^.*Bump .*$'
+      order: 1
+    - title: Changes
+      order: 0
+
+release:
+  header: |
+    ## インストール
+
+    下記のアーカイブから OS / アーキテクチャに合ったもの（Windows は `runnora-docgen_{{ .Tag }}_windows_amd64.zip`）をダウンロードし、
+    展開した `runnora-docgen` を PATH の通った場所に置いてください。
+
+    ```sh
+    go install github.com/ramsesyok/runnora-docgen@{{ .Tag }}
+    ```

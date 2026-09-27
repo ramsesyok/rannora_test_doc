@@ -13,6 +13,7 @@ func NewRootCmd(stdout, stderr io.Writer) *cobra.Command {
 	root := &cobra.Command{
 		Use:           "runnora-docgen",
 		Short:         "runnora シナリオからレビュー用テスト手順書を生成する",
+		Version:       currentVersion(),
 		SilenceUsage:  true,
 		SilenceErrors: true,
 	}
