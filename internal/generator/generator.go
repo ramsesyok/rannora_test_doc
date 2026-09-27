@@ -156,12 +156,24 @@ type plannedFile struct {
 }
 
 type manifest struct {
-	Generator string   `json:"generator"`
-	Scenario  string   `json:"scenario"`
-	Source    string   `json:"source"`
-	SHA256    string   `json:"sha256"`
-	Files     []string `json:"files"`
-	Inputs    any      `json:"inputs"`
+	Generator string `json:"generator"`
+	Scenario  string `json:"scenario"`
+	// ScenarioID は runbook の runnora: ブロックの id (runnora の report.json と同じ)。ブロックがなければ省く。
+	ScenarioID string `json:"scenarioId,omitempty"`
+	Source     string `json:"source"`
+	SHA256     string `json:"sha256"`
+	// Steps は手順書の手順番号と、runnora のステップのキーの対応。
+	Steps  []manifestStep `json:"steps"`
+	Files  []string       `json:"files"`
+	Inputs any            `json:"inputs"`
+}
+
+// manifestStep は手順 1 行分。loop のステップは手順書では 1 行なので、キーに [n] を付けず loop: true にする
+// (runnora の report.json では key[0]、key[1] … と回ごとに分かれる)。
+type manifestStep struct {
+	Number int    `json:"number"`
+	Key    string `json:"key"`
+	Loop   bool   `json:"loop,omitempty"`
 }
 
 func Generate(ctx context.Context, opts Options) (*Result, error) {
@@ -204,13 +216,23 @@ func Generate(ctx context.Context, opts Options) (*Result, error) {
 			manifestFiles = append(manifestFiles, document.Name)
 		}
 		sort.Strings(manifestFiles)
+		steps := make([]manifestStep, 0, len(scenario.Steps))
+		for _, s := range scenario.Steps {
+			steps = append(steps, manifestStep{Number: s.Number, Key: s.Key, Loop: s.Loop})
+		}
+		scenarioID := ""
+		if block, _, err := project.ReadBlock(in.path); err == nil && block != nil {
+			scenarioID = block.ID
+		}
 		manifestData, err := json.MarshalIndent(manifest{
-			Generator: "runnora-docgen",
-			Scenario:  scenario.Name,
-			Source:    scenario.SourcePath,
-			SHA256:    scenario.SourceHash,
-			Files:     manifestFiles,
-			Inputs:    scenario.Sources,
+			Generator:  "runnora-docgen",
+			Scenario:   scenario.Name,
+			ScenarioID: scenarioID,
+			Source:     scenario.SourcePath,
+			SHA256:     scenario.SourceHash,
+			Steps:      steps,
+			Files:      manifestFiles,
+			Inputs:     scenario.Sources,
 		}, "", "  ")
 		if err != nil {
 			return nil, err

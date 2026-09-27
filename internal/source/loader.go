@@ -122,7 +122,7 @@ func (l *loader) loadRunbook(path string) (*model.Scenario, error) {
 	}
 
 	caseRefs := caseReferences(root)
-	includePath := suiteIncludePath(root)
+	includeKey, includePath, includeLoop := suiteInclude(root)
 	if len(caseRefs) > 0 && includePath != "" {
 		childPath := resolveReference(filepath.Dir(abs), includePath)
 		child, childErr := l.loadRunbook(childPath)
@@ -135,6 +135,9 @@ func (l *loader) loadRunbook(path string) (*model.Scenario, error) {
 		}
 		for i := range scenario.Steps {
 			scenario.Steps[i].Number = i + 1
+			// runnora では suite のステップ (include) を通して呼ぶので、キーはそのステップとつなぐ
+			scenario.Steps[i].Key = includeKey + "." + scenario.Steps[i].Key
+			scenario.Steps[i].Loop = scenario.Steps[i].Loop || includeLoop
 		}
 		for _, ref := range caseRefs {
 			caseValue, caseErr := loadCase(filepath.Dir(abs), ref)
@@ -213,17 +216,18 @@ func (l *loader) parseSteps(root *yaml.Node, sourcePath string, runners []runner
 	}
 	type rawStep struct {
 		id   string
+		key  string
 		node *yaml.Node
 	}
 	var raw []rawStep
 	switch stepsNode.Kind {
 	case yaml.MappingNode:
 		for _, entry := range mappingEntries(stepsNode) {
-			raw = append(raw, rawStep{id: entry[0].Value, node: entry[1]})
+			raw = append(raw, rawStep{id: entry[0].Value, key: entry[0].Value, node: entry[1]})
 		}
 	case yaml.SequenceNode:
 		for i, n := range stepsNode.Content {
-			raw = append(raw, rawStep{id: fmt.Sprintf("step-%d", i+1), node: n})
+			raw = append(raw, rawStep{id: fmt.Sprintf("step-%d", i+1), key: strconv.Itoa(i), node: n})
 		}
 	default:
 		return nil, fmt.Errorf("steps は mapping または sequence である必要があります: %s", sourcePath)
@@ -248,8 +252,11 @@ func (l *loader) parseSteps(root *yaml.Node, sourcePath string, runners []runner
 			}
 			l.includeSources = append(l.includeSources, append(child.Sources, varSources...)...)
 			includeDesc := scalar(mappingValue(item.node, "desc"))
+			includeLoop := mappingValue(item.node, "loop") != nil
 			for _, childStep := range child.Steps {
 				childStep.ID = item.id + "." + childStep.ID
+				childStep.Key = item.key + "." + childStep.Key
+				childStep.Loop = childStep.Loop || includeLoop
 				// 1 ステップだけの template はケースの呼び出しそのものなので、include 側の説明を手順名にする
 				if includeDesc != "" && len(child.Steps) == 1 {
 					childStep.Description = includeDesc
@@ -260,6 +267,8 @@ func (l *loader) parseSteps(root *yaml.Node, sourcePath string, runners []runner
 			continue
 		}
 		step := parseStep(item.id, item.node, sourcePath, runners, protoTypes)
+		step.Key = item.key
+		step.Loop = mappingValue(item.node, "loop") != nil
 		result = append(result, step)
 	}
 	for i := range result {
@@ -386,14 +395,15 @@ func caseReferences(root *yaml.Node) []string {
 	return refs
 }
 
-func suiteIncludePath(root *yaml.Node) string {
+// suiteInclude は suite が template を呼ぶステップのキー、include のパス、loop があるかを返す。
+func suiteInclude(root *yaml.Node) (key, path string, loop bool) {
 	steps := mappingValue(root, "steps")
 	for _, entry := range mappingEntries(steps) {
 		if include := mappingValue(entry[1], "include"); include != nil {
-			return scalar(mappingValue(include, "path"))
+			return entry[0].Value, scalar(mappingValue(include, "path")), mappingValue(entry[1], "loop") != nil
 		}
 	}
-	return ""
+	return "", "", false
 }
 
 func loadCase(baseDir, ref string) (model.Case, error) {

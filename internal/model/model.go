@@ -15,8 +15,13 @@ type Scenario struct {
 }
 
 type Step struct {
-	Number               int
-	ID                   string
+	Number int
+	ID     string
+	// Key は runnora の report.json と証跡のファイル名で使うステップのキー。
+	// include 先は呼び出したステップのキーと . でつなぐ (inc.call)。steps が配列なら 0 始まりの添字。
+	Key string
+	// Loop は runnora の実行で回ごとに結果が分かれるステップ (自身か呼び出したステップに loop がある)。
+	Loop                 bool
 	Description          string
 	Kind                 StepKind
 	HTTP                 *HTTPRequest
