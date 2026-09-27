@@ -22,6 +22,12 @@ type Options struct {
 	AfterSQL   []string
 	ProtoPaths []string
 	BaseDir    string
+	// ProjectPath は新形式の runnora.yaml (出典として記録する)。
+	// ProjectBefore / ProjectAfter は runnora.yaml の環境・スイートと runbook の runnora: ブロックから
+	// 決めた前後処理 (絶対パス、runnora run の実行順)。BeforeSQL / AfterSQL はその内側に加える。
+	ProjectPath   string
+	ProjectBefore []string
+	ProjectAfter  []string
 }
 
 type loader struct {
@@ -57,6 +63,11 @@ func Load(path string, opts Options) (*model.Scenario, []string, error) {
 	scenario.AfterHooks = after
 	if opts.ConfigPath != "" {
 		if ref, refErr := sourceRef("config", resolveWithBase(opts.BaseDir, opts.ConfigPath)); refErr == nil {
+			addSource(scenario, ref)
+		}
+	}
+	if opts.ProjectPath != "" {
+		if ref, refErr := sourceRef("project", opts.ProjectPath); refErr == nil {
 			addSource(scenario, ref)
 		}
 	}
@@ -496,8 +507,9 @@ func loadHooks(opts Options) ([]model.Asset, []model.Asset, []string, error) {
 		beforePaths = append(beforePaths, sequenceStrings(mappingValue(common, "before"))...)
 		afterPaths = append(afterPaths, sequenceStrings(mappingValue(common, "after"))...)
 	}
+	beforePaths = append(beforePaths, opts.ProjectBefore...)
 	beforePaths = append(beforePaths, opts.BeforeSQL...)
-	afterPaths = append(append([]string{}, opts.AfterSQL...), afterPaths...)
+	afterPaths = append(append(append([]string{}, opts.AfterSQL...), opts.ProjectAfter...), afterPaths...)
 	before, warnings, err := readAssets(beforePaths, "before", opts.BaseDir)
 	if err != nil {
 		return nil, nil, warnings, err
