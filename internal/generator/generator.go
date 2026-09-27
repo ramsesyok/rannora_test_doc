@@ -10,6 +10,7 @@ import (
 	"strings"
 
 	"github.com/ramsesyok/runnora-docgen/internal/model"
+	"github.com/ramsesyok/runnora-docgen/internal/project"
 	"github.com/ramsesyok/runnora-docgen/internal/render"
 	"github.com/ramsesyok/runnora-docgen/internal/source"
 )
@@ -23,6 +24,125 @@ type Options struct {
 	ProtoPaths   []string
 	BaseDir      string
 	Force        bool
+	// ProjectPath / Env / Suite は新形式 (runnora.yaml) の指定。
+	// ConfigPath がなければ runnora.yaml を現在のディレクトリから親へ探して使う。
+	// Suite を指定すると、runbook はスイートの条件で選ぶ (RunbookPaths は指定しない)。
+	ProjectPath string
+	Env         string
+	Suite       string
+}
+
+// input は原稿にする runbook 1 つ分と、その読み込み設定。
+type input struct {
+	path string
+	opts source.Options
+}
+
+// planInputs は原稿にする runbook と、runbook ごとの前後処理を決める。
+func planInputs(opts Options) ([]input, []string, error) {
+	base := source.Options{
+		ConfigPath: opts.ConfigPath,
+		BeforeSQL:  opts.BeforeSQL,
+		AfterSQL:   opts.AfterSQL,
+		ProtoPaths: opts.ProtoPaths,
+		BaseDir:    opts.BaseDir,
+	}
+	projectPath := opts.ProjectPath
+	if opts.ConfigPath != "" {
+		if projectPath != "" || opts.Env != "" || opts.Suite != "" {
+			return nil, nil, fmt.Errorf("--config (旧形式) と --project / --env / --suite は同時に指定できません")
+		}
+	} else if projectPath == "" {
+		found, err := project.Find(".")
+		if err != nil {
+			return nil, nil, err
+		}
+		projectPath = found
+	}
+	if projectPath == "" {
+		if opts.Env != "" || opts.Suite != "" {
+			return nil, nil, fmt.Errorf("--env / --suite を使うには runnora.yaml が必要です (--project で指定するか、プロジェクトのディレクトリで実行してください)")
+		}
+		if len(opts.RunbookPaths) == 0 {
+			return nil, nil, fmt.Errorf("runbook を1つ以上指定してください")
+		}
+		inputs := make([]input, 0, len(opts.RunbookPaths))
+		for _, path := range opts.RunbookPaths {
+			inputs = append(inputs, input{path: path, opts: base})
+		}
+		return inputs, nil, nil
+	}
+
+	p, err := project.Load(projectPath)
+	if err != nil {
+		return nil, nil, err
+	}
+	switch {
+	case opts.Suite != "" && len(opts.RunbookPaths) > 0:
+		return nil, nil, fmt.Errorf("--suite と runbook の引数は同時に指定できません")
+	case opts.Suite == "" && len(opts.RunbookPaths) == 0:
+		return nil, nil, fmt.Errorf("runbook を指定するか --suite を指定してください")
+	}
+	envName, err := p.SelectEnv(opts.Env, opts.Suite)
+	if err != nil {
+		return nil, nil, err
+	}
+	hooks, err := p.Hooks(envName, opts.Suite)
+	if err != nil {
+		return nil, nil, err
+	}
+	paths := opts.RunbookPaths
+	if opts.Suite != "" {
+		sel, err := p.Suite(opts.Suite)
+		if err != nil {
+			return nil, nil, err
+		}
+		selected, err := p.Select(sel)
+		if err != nil {
+			return nil, nil, err
+		}
+		if len(selected) == 0 {
+			return nil, nil, fmt.Errorf("スイート %q の条件に合う runbook がありません (runnora: ブロックを持つ runbook だけが対象です)", opts.Suite)
+		}
+		paths = nil
+		for _, s := range selected {
+			paths = append(paths, s.Path)
+		}
+	}
+	if base.BaseDir == "" {
+		base.BaseDir = p.Root
+	}
+	base.ProjectPath = p.Path
+
+	var (
+		inputs   []input
+		warnings []string
+	)
+	for _, path := range paths {
+		block, _, err := project.ReadBlock(path)
+		if err != nil {
+			return nil, nil, err
+		}
+		if !block.AllowedIn(envName) {
+			warnings = append(warnings, fmt.Sprintf("%s: 環境 %s では実行しない runbook (runnora.envs) なので原稿を作りません", path, envName))
+			continue
+		}
+		o := base
+		// runnora run と同じ順: 環境 → スイート → runbook の before、runbook → スイート → 環境の after
+		o.ProjectBefore = append([]string{}, hooks.Before...)
+		o.ProjectAfter = nil
+		if block != nil {
+			for _, f := range block.Before {
+				o.ProjectBefore = append(o.ProjectBefore, p.Abs(f))
+			}
+			for _, f := range block.After {
+				o.ProjectAfter = append(o.ProjectAfter, p.Abs(f))
+			}
+		}
+		o.ProjectAfter = append(o.ProjectAfter, hooks.After...)
+		inputs = append(inputs, input{path: path, opts: o})
+	}
+	return inputs, warnings, nil
 }
 
 type Result struct {
@@ -45,8 +165,9 @@ type manifest struct {
 }
 
 func Generate(ctx context.Context, opts Options) (*Result, error) {
-	if len(opts.RunbookPaths) == 0 {
-		return nil, fmt.Errorf("runbook を1つ以上指定してください")
+	inputs, planWarnings, err := planInputs(opts)
+	if err != nil {
+		return nil, err
 	}
 	if opts.OutputDir == "" {
 		opts.OutputDir = "generated"
@@ -57,23 +178,17 @@ func Generate(ctx context.Context, opts Options) (*Result, error) {
 	}
 
 	var plan []plannedFile
-	result := &Result{}
+	result := &Result{Warnings: planWarnings}
 	usedIDs := map[string]string{}
-	for _, runbook := range opts.RunbookPaths {
+	for _, in := range inputs {
 		if err := ctx.Err(); err != nil {
 			return nil, err
 		}
-		scenario, warnings, err := source.Load(runbook, source.Options{
-			ConfigPath: opts.ConfigPath,
-			BeforeSQL:  opts.BeforeSQL,
-			AfterSQL:   opts.AfterSQL,
-			ProtoPaths: opts.ProtoPaths,
-			BaseDir:    opts.BaseDir,
-		})
+		scenario, warnings, err := source.Load(in.path, in.opts)
 		if err != nil {
 			return nil, err
 		}
-		makePathsPortable(scenario, opts.BaseDir)
+		makePathsPortable(scenario, in.opts.BaseDir)
 		if previous, exists := usedIDs[scenario.ID]; exists {
 			return nil, fmt.Errorf("出力 ID %q が重複します: %s, %s", scenario.ID, previous, scenario.SourcePath)
 		}
