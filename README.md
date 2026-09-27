@@ -33,9 +33,27 @@ Pandoc GridTable を使用し、PDFでは常に横向きページとして組版
 
 Client streaming RPC と双方向 streaming RPC は初期版の対象外です。テスト実行や実測レスポンスの収集も行いません。
 
-## コマンド
+## インストール
 
-リポジトリのルートでビルドし、実行します。
+[Releases](https://github.com/ramsesyok/runnora-docgen/releases) から OS / アーキテクチャに合ったアーカイブ（Windows は `runnora-docgen_v<バージョン>_windows_amd64.zip`）をダウンロードし、展開した `runnora-docgen` を PATH の通った場所に置きます。`runnora-docgen --version` でバージョンを確認できます。
+
+Go がある場合は `go install` でも入れられます。
+
+```bash
+go install github.com/ramsesyok/runnora-docgen@latest
+```
+
+ソースからビルドする場合は、リポジトリのルートで `go build -o runnora-docgen.exe .` を実行します。
+
+### リリースの作り方（メンテナ向け）
+
+`v0.4.0` のような `v` で始まるタグを付けると、GitHub Actions（`.github/workflows/release.yml`）がテストを実行してから、
+GoReleaser（`.goreleaser.yaml`）で Linux / macOS / Windows（amd64 / arm64）向けの実行ファイルを作り、Release に添付します。
+
+- ブラウザの場合：Releases → Draft a new release → Choose a tag で新しいタグ（例：`v0.4.0`）を入力し、`main` を対象に Publish release する
+- Actions の画面から：Release → Run workflow でタグ名を入力する（`main` の先頭にタグを付けてリリースする）
+
+## コマンド
 
 新形式（runnora `v0.3.0` より後の `runnora.yaml`）のプロジェクトでは、プロジェクトのディレクトリで実行し、スイートか runbook を指定します。
 

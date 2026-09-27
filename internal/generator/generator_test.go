@@ -67,8 +67,11 @@ steps:
 	if !strings.Contains(string(scenarioData), `期待値：\[200\]`) {
 		t.Fatalf("scenario does not contain status:\n%s", scenarioData)
 	}
-	if strings.Contains(string(scenarioData), filepath.Clean(dir)) {
-		t.Fatalf("scenario header contains an absolute source path:\n%s", scenarioData)
+	// 出典は相対パスで書く (一時ディレクトリの相対パスは OS によって "../tmp/..." になるので、行の先頭で判定する)
+	for _, line := range strings.Split(string(scenarioData), "\n") {
+		if source, ok := strings.CutPrefix(line, "source: "); ok && (filepath.IsAbs(source) || strings.HasPrefix(source, "/")) {
+			t.Fatalf("scenario header contains an absolute source path:\n%s", scenarioData)
+		}
 	}
 	if !strings.Contains(string(scenarioData), "::: {.landscape}\n::: {.tbl") {
 		t.Fatalf("scenario table is not landscape:\n%s", scenarioData)
