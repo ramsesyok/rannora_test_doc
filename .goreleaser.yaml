@@ -2,6 +2,13 @@ version: 2
 
 project_name: runnora-docgen
 
+# Windows の実行ファイルに製品名・バージョンなどのリソースを埋め込む (生成した rsrc_windows_*.syso を go build が自動でリンクする)。
+# 署名のない Go の実行ファイルは、シンボルを削り (-s -w) 製品情報もないと Windows Defender の
+# 機械学習判定 (Trojan:Win32/Wacatac.B!ml など) で誤検出されやすいため、シンボルを残し製品情報を付ける。
+before:
+  hooks:
+    - go run github.com/tc-hib/go-winres@v0.3.3 simply --arch amd64,arm64 --manifest cli --product-name runnora-docgen --file-description "runnora-docgen - runbook documentation generator" --original-filename runnora-docgen.exe --product-version {{ .Version }} --file-version {{ .Version }}
+
 builds:
   - id: runnora-docgen
     main: .
@@ -13,7 +20,7 @@ builds:
     flags:
       - -trimpath
     ldflags:
-      - -s -w -X github.com/ramsesyok/runnora-docgen/cmd.Version=v{{ .Version }}
+      - -X github.com/ramsesyok/runnora-docgen/cmd.Version=v{{ .Version }}
 
 archives:
   - formats: [tar.gz]
