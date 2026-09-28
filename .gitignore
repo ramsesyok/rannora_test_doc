@@ -5,3 +5,5 @@
 /*.exe
 # goreleaser の出力
 /dist/
+# goreleaser の before フックが作る Windows リソース
+/rsrc_windows_*.syso
