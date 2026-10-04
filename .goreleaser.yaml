@@ -7,6 +7,7 @@ project_name: runnora-docgen
 # 機械学習判定 (Trojan:Win32/Wacatac.B!ml など) で誤検出されやすいため、シンボルを残し製品情報を付ける。
 before:
   hooks:
+    - go run scripts/licenses.go
     - go run github.com/tc-hib/go-winres@v0.3.3 simply --arch amd64,arm64 --manifest cli --product-name runnora-docgen --file-description "runnora-docgen - runbook documentation generator" --original-filename runnora-docgen.exe --product-version {{ .Version }} --file-version {{ .Version }}
 
 builds:
@@ -29,7 +30,9 @@ archives:
         formats: [zip]
     name_template: "{{ .ProjectName }}_v{{ .Version }}_{{ .Os }}_{{ .Arch }}"
     files:
+      - LICENSE
       - README.md
+      - THIRD_PARTY_NOTICES.md
 
 checksum:
   name_template: checksums.txt
