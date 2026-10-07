@@ -29,7 +29,7 @@ steps:
 		t.Fatal(err)
 	}
 	output := filepath.Join(dir, "generated")
-	result, err := Generate(context.Background(), Options{RunbookPaths: []string{runbook}, OutputDir: output})
+	result, err := Generate(context.Background(), Options{RunbookPaths: []string{runbook}, OutputDir: output, ShowJSONDetail: true})
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -107,6 +107,163 @@ steps:
 	}
 	if !strings.Contains(string(expectationData), "::: {.landscape}\n::: {.tbl") {
 		t.Fatalf("expectation table is not landscape:\n%s", expectationData)
+	}
+}
+
+func TestGenerateShowsJSONDetailOnlyWhenRequested(t *testing.T) {
+	dir := t.TempDir()
+	files := map[string]string{
+		"suite.yml": `steps:
+  created:
+    include:
+      path: template.yml
+      vars:
+        case: json://case.json
+        request: json://request.json
+        expected: json://response.json
+`,
+		"template.yml": `runners:
+  req: {endpoint: http://example.test}
+steps:
+  call:
+    req:
+      /books:
+        post:
+          body:
+            application/json: "{{ vars.request }}"
+    test: current.res.status == vars.case.expect.status && compare(current.res.body, vars.expected)
+`,
+		"case.json":     `{"expect":{"status":201}}`,
+		"request.json":  `{"title":"Example"}`,
+		"response.json": `{"id":"B1"}`,
+	}
+	for name, content := range files {
+		if err := os.WriteFile(filepath.Join(dir, name), []byte(content), 0o644); err != nil {
+			t.Fatal(err)
+		}
+	}
+	for _, tt := range []struct {
+		name       string
+		showDetail bool
+		wantTable  bool
+	}{
+		{name: "default filenames"},
+		{name: "requested detail", showDetail: true, wantTable: true},
+	} {
+		t.Run(tt.name, func(t *testing.T) {
+			output := filepath.Join(dir, strings.ReplaceAll(tt.name, " ", "-"))
+			_, err := Generate(context.Background(), Options{
+				RunbookPaths: []string{filepath.Join(dir, "suite.yml")},
+				OutputDir:    output, ShowJSONDetail: tt.showDetail,
+			})
+			if err != nil {
+				t.Fatal(err)
+			}
+			read := func(name string) string {
+				data, err := os.ReadFile(filepath.Join(output, "suite", name))
+				if err != nil {
+					t.Fatal(err)
+				}
+				return string(data)
+			}
+			scenario := read("scenario.qmd")
+			request := read("request-json.qmd")
+			expected := read("expectations.qmd")
+			if tt.wantTable {
+				if !strings.Contains(scenario, "@tbl-req-") || !strings.Contains(scenario, "@tbl-exp-") ||
+					!strings.Contains(request, "::: {.tbl") || !strings.Contains(expected, "::: {.tbl") {
+					t.Fatalf("JSON detail tables missing: %s\n%s\n%s", scenario, request, expected)
+				}
+			} else {
+				for _, want := range []string{"request.json", "response.json", `期待値：\[201\]`} {
+					if !strings.Contains(scenario, want) {
+						t.Fatalf("missing %q in scenario: %s", want, scenario)
+					}
+				}
+				if strings.Contains(scenario, "@tbl-req-") || strings.Contains(scenario, "@tbl-exp-") ||
+					strings.Contains(request, "::: {.tbl") || strings.Contains(expected, "::: {.tbl") {
+					t.Fatalf("unexpected JSON detail table: %s\n%s\n%s", scenario, request, expected)
+				}
+			}
+		})
+	}
+}
+
+func TestGenerateLoopSummarizesOnlyComparedResponseBody(t *testing.T) {
+	dir := t.TempDir()
+	files := map[string]string{
+		"suite.yml": `vars:
+  cases: [json://first.json, json://second.json]
+steps:
+  run:
+    loop: {count: len(vars.cases)}
+    include: {path: template.yml}
+`,
+		"first.json":  `{"name":"first","requestBody":{"id":"A"},"expect":{"status":201,"body":{"id":"A"}}}`,
+		"second.json": `{"name":"second","requestBody":{"id":"B"},"expect":{"status":400,"body":{"error":"invalid"}}}`,
+	}
+	for name, content := range files {
+		if err := os.WriteFile(filepath.Join(dir, name), []byte(content), 0o644); err != nil {
+			t.Fatal(err)
+		}
+	}
+	for _, tt := range []struct {
+		name      string
+		bodyCheck string
+		wantBody  bool
+	}{
+		{name: "status only", bodyCheck: "", wantBody: false},
+		{name: "status and body", bodyCheck: " && compare(current.res.body, vars.case.expect.body)", wantBody: true},
+	} {
+		t.Run(tt.name, func(t *testing.T) {
+			template := `runners:
+  req: {endpoint: http://example.test}
+steps:
+  call:
+    req:
+      /books:
+        post:
+          body:
+            application/json: "{{ vars.case.requestBody }}"
+    test: current.res.status == vars.case.expect.status` + tt.bodyCheck + "\n"
+			if err := os.WriteFile(filepath.Join(dir, "template.yml"), []byte(template), 0o644); err != nil {
+				t.Fatal(err)
+			}
+			output := filepath.Join(dir, strings.ReplaceAll(tt.name, " ", "-"))
+			if _, err := Generate(context.Background(), Options{
+				RunbookPaths: []string{filepath.Join(dir, "suite.yml")}, OutputDir: output,
+			}); err != nil {
+				t.Fatal(err)
+			}
+			data, err := os.ReadFile(filepath.Join(output, "suite", "cases.qmd"))
+			if err != nil {
+				t.Fatal(err)
+			}
+			cases := string(data)
+			for _, want := range []string{"first.json（requestBody）", "second.json（requestBody）"} {
+				if !strings.Contains(cases, want) {
+					t.Fatalf("cases missing request %q:\n%s", want, cases)
+				}
+			}
+			wantCount := 0
+			if tt.wantBody {
+				wantCount = 2
+			}
+			if got := strings.Count(cases, "expect.body"); got != wantCount {
+				t.Fatalf("cases body reference count = %d, want %d:\n%s", got, wantCount, cases)
+			}
+			scenarioData, err := os.ReadFile(filepath.Join(output, "suite", "scenario.qmd"))
+			if err != nil {
+				t.Fatal(err)
+			}
+			scenario := string(scenarioData)
+			if !strings.Contains(scenario, `期待値：\[ケース別\]`) || strings.Contains(scenario, "@tbl-exp-") {
+				t.Fatalf("scenario status/detail mismatch:\n%s", scenario)
+			}
+			if got := strings.Count(scenario, "expect.body"); got != wantCount {
+				t.Fatalf("scenario body reference count = %d, want %d:\n%s", got, wantCount, scenario)
+			}
+		})
 	}
 }
 

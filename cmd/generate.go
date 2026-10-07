@@ -46,6 +46,7 @@ runnora.yaml は --project で指定するか、現在のディレクトリか�
 	cmd.Flags().StringSliceVar(&opts.AfterSQL, "after-sql", nil, "追加の後処理 SQL（複数指定可）")
 	cmd.Flags().StringSliceVar(&opts.ProtoPaths, "proto", nil, "RPC 種別判定に使う .proto（複数指定可）")
 	cmd.Flags().StringVar(&opts.BaseDir, "base-dir", "", "config と追加 SQL の相対パスの基準（既定: runnora.yaml のディレクトリ、なければ現在のディレクトリ）")
+	cmd.Flags().BoolVar(&opts.ShowJSONDetail, "show-json-detail", false, "リクエスト・期待レスポンスボディの JSON フィールド詳細を表示する（既定はファイル名のみ）")
 	cmd.Flags().BoolVarP(&opts.Force, "force", "f", false, "既存の生成原稿を上書きする")
 	return cmd
 }

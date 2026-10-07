@@ -99,6 +99,7 @@ C:\tools\runnora-docgen.exe generate --env unit --out docs\generated\one runbook
 | `--after-sql` | 追加の後処理 SQL。複数指定可能（上記の後処理の前に載せる） |
 | `--proto` | RPC 種別判定に使う `.proto`。複数指定可能 |
 | `--base-dir` | config と追加 SQL の相対パス、および生成物に記録する入力元パスの基準（既定: `runnora.yaml` のディレクトリ、なければ現在のディレクトリ） |
+| `--show-json-detail` | 送信本文・期待レスポンスボディの JSON 各フィールドを詳細表に載せる（既定は参照ファイル名と、必要ならファイル内のフィールド名のみ） |
 | `-f, --force` | 既存の生成原稿を上書き |
 
 シナリオごとに `scenario.qmd`、`cases.qmd`、`http.qmd`、`grpc.qmd`、
@@ -137,6 +138,16 @@ include 先の URL・ヘッダ・リクエストボディにある `{{ vars.xxx 
 詳細表への参照の次行にJSONファイル名だけを追記します。複数ある場合は改行して列挙します。
 YAMLへの直接記述や、実行時にしか決まらないファイル名には追記しません。
 ステータス未指定時は値を補わず、ケースごとに異なる場合は `[ケース別]`、gRPCは `[gRPC 0]` 等で示します。
+
+既定では、送信本文と期待レスポンスボディの詳細表を出さず、シナリオ表に参照先を示します。
+ファイル全体を本文として使う場合は `request.json` / `response.json`、複合 case の一部を使う場合は
+`case.json（requestBody）` / `case.json（expect.body）` のように表示します。ステータスや `ignorePaths` の出典は
+レスポンスボディの参照として表示しません。`compare`、`diffEps`、等価比較で応答本文と対応付けられない
+変数については、期待本文の出典を推測せず、検証式の runbook と行番号を示します。インラインの送信本文は runbook 名に「インライン」を付けて示します。
+`vars.cases` と `loop` を使う suite では、ケース一覧にもケースごとのファイル名と本文フィールドを示します。
+詳細原稿のファイル自体は、既存文書の固定 include を壊さず古い詳細表を上書きできるよう、内容のない原稿として生成します。
+既存文書が詳細原稿の前に独自の見出しを置いている場合、短縮表示用の章構成ではその見出しを外してください。
+`--show-json-detail` を指定すると、送信本文と期待レスポンスボディの JSON 各フィールドを詳細表に展開します。
 
 設計判断と今後の検討事項は [docs/design-notes.md](docs/design-notes.md) を参照してください。
 
