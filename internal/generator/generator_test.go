@@ -92,7 +92,7 @@ steps:
 	if err != nil {
 		t.Fatal(err)
 	}
-	if !strings.Contains(string(httpData), `widths="6,8,46,20,20"`) {
+	if !strings.Contains(string(httpData), `widths="6,8,40,23,23"`) {
 		t.Fatalf("HTTP widths are incorrect:\n%s", httpData)
 	}
 	if strings.Contains(string(httpData), "Runner") {
@@ -114,6 +114,8 @@ func TestGenerateRequiresForceForExistingOutput(t *testing.T) {
 	dir := t.TempDir()
 	runbook := filepath.Join(dir, "scenario.yml")
 	content := `desc: health
+runnora:
+  id: HEALTH-001
 runners:
   req: {endpoint: http://example.test}
 steps:
@@ -130,11 +132,35 @@ steps:
 	if _, err := Generate(context.Background(), opts); err != nil {
 		t.Fatal(err)
 	}
+	if _, err := os.Stat(filepath.Join(opts.OutputDir, "health-001", "scenario.qmd")); err != nil {
+		t.Fatalf("ID-based output is missing: %v", err)
+	}
 	if _, err := Generate(context.Background(), opts); err == nil || !strings.Contains(err.Error(), "--force") {
 		t.Fatalf("second generation error = %v, want --force guidance", err)
 	}
 	opts.Force = true
 	if _, err := Generate(context.Background(), opts); err != nil {
 		t.Fatalf("force generation failed: %v", err)
+	}
+}
+
+func TestGenerateRejectsCollidingNormalizedRunnoraIDs(t *testing.T) {
+	dir := t.TempDir()
+	for name, id := range map[string]string{"first.yml": "A_B", "second.yml": "A-B"} {
+		content := "runnora:\n  id: " + id + "\nsteps:\n  check:\n    test: true\n"
+		if err := os.WriteFile(filepath.Join(dir, name), []byte(content), 0o644); err != nil {
+			t.Fatal(err)
+		}
+	}
+	out := filepath.Join(dir, "generated")
+	_, err := Generate(context.Background(), Options{
+		RunbookPaths: []string{filepath.Join(dir, "first.yml"), filepath.Join(dir, "second.yml")},
+		OutputDir:    out,
+	})
+	if err == nil || !strings.Contains(err.Error(), `同じ生成コマンド内で出力フォルダ名 "a-b" が重複します`) {
+		t.Fatalf("expected normalized ID collision, got %v", err)
+	}
+	if _, err := os.Stat(out); !os.IsNotExist(err) {
+		t.Fatalf("output was written before collision check: %v", err)
 	}
 }

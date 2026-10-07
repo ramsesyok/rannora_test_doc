@@ -61,7 +61,7 @@ func TestHooksListFileNamesWithoutSQLBody(t *testing.T) {
 		AfterHooks: []model.Asset{{Path: "sql/common/90_verify.sql", Content: "BEGIN NULL; END;"}},
 	}
 	before := renderHooks(scenario, true)
-	for _, want := range []string{"順序", "ファイル", "出典", "00_reset.sql", "sql/common/00_reset.sql", "setup.sql", "sql/cases/setup.sql"} {
+	for _, want := range []string{`widths="6,34,60"`, "順序", "ファイル", "出典", "00_reset.sql", "sql/common/00_reset.sql", "setup.sql", "sql/cases/setup.sql"} {
 		if !strings.Contains(before, want) {
 			t.Fatalf("missing %q:\n%s", want, before)
 		}
@@ -85,15 +85,32 @@ func TestHTTPTableShowsQueryPerLine(t *testing.T) {
 	scenario := &model.Scenario{ID: "query", Steps: []model.Step{{
 		ID: "search", Number: 1, Kind: model.StepHTTP,
 		HTTP: &model.HTTPRequest{Endpoint: "http://example.test", Method: "GET", Path: "/books",
-			Query: "genre=NOVEL&availableOnly=", Headers: map[string]any{"X-Test-Case": "search"}},
+			Query: "genre=NOVEL&availableOnly=", Headers: map[string]any{"X-Test-Case": "search", "X-Values": "one,two"}},
 	}}}
 	got := renderHTTP(scenario)
-	for _, want := range []string{"http://example.test/books", `genre=NOVEL\`, "availableOnly=", `{"X-Test-Case":"search"}`} {
+	for _, want := range []string{`widths="6,8,40,23,23"`, "http://example.test/books", `genre=NOVEL\`, "availableOnly=", `"X-Test-Case":"search",\`, `"X-Values":"one,two"`} {
 		if !strings.Contains(got, want) {
 			t.Fatalf("missing %q:\n%s", want, got)
 		}
 	}
-	if strings.Contains(got, "/books?") {
+	if strings.Contains(got, "/books?") || strings.Contains(got, `{"X-Test-Case"`) {
 		t.Fatalf("query must not stay in the URL column:\n%s", got)
+	}
+}
+
+func TestExpectationConditionBreaksAndJSONLabel(t *testing.T) {
+	scenario := &model.Scenario{ID: "expect", Steps: []model.Step{{
+		ID: "check", Number: 1,
+		Test:                `current.res.status == 200 && current.res.body.note == "a&&b" && current.res.body.ok`,
+		ExpectationJSONData: []model.JSONData{{Path: "fixtures/expect.json", Value: map[string]any{"ok": true}}},
+	}}}
+	got := renderExpectations(scenario)
+	for _, want := range []string{`widths="10,20,62"`, "期待値JSON", "expect.json", `200 &&\`, `"a&&b" &&\`} {
+		if !strings.Contains(got, want) {
+			t.Fatalf("missing %q:\n%s", want, got)
+		}
+	}
+	if strings.Contains(got, `"a&\`) {
+		t.Fatalf("a string literal was split:\n%s", got)
 	}
 }

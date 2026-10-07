@@ -146,6 +146,18 @@ func TestSlugMakesDistinctIDsForJapaneseNames(t *testing.T) {
 	}
 }
 
+func TestOutputIDIsSafeAsADirectoryName(t *testing.T) {
+	for input, want := range map[string]string{
+		"ORD-001":    "ord-001",
+		"../ORD_001": "ord-001",
+		"CON":        "scenario-con",
+	} {
+		if got := OutputID(input); got != want {
+			t.Errorf("OutputID(%q) = %q, want %q", input, got, want)
+		}
+	}
+}
+
 func writeTestFile(t *testing.T, path, content string) {
 	t.Helper()
 	if err := os.WriteFile(path, []byte(content), 0o644); err != nil {

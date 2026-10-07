@@ -189,7 +189,7 @@ func TestGenerateSuiteFromProject(t *testing.T) {
 	if len(result.Warnings) != 1 || !strings.Contains(result.Warnings[0], "b.yml") {
 		t.Errorf("warnings = %v", result.Warnings)
 	}
-	before, err := os.ReadFile(filepath.Join(out, "a", "before.qmd"))
+	before, err := os.ReadFile(filepath.Join(out, "a-1", "before.qmd"))
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -198,14 +198,14 @@ func TestGenerateSuiteFromProject(t *testing.T) {
 	if iEnv < 0 || iSuite < iEnv || iRb < iSuite {
 		t.Errorf("before.qmd order is wrong:\n%s", text)
 	}
-	manifest, err := os.ReadFile(filepath.Join(out, "a", "manifest.json"))
+	manifest, err := os.ReadFile(filepath.Join(out, "a-1", "manifest.json"))
 	if err != nil {
 		t.Fatal(err)
 	}
 	if !strings.Contains(string(manifest), `"runnora.yaml"`) || !strings.Contains(string(manifest), `"project"`) {
 		t.Errorf("manifest does not record runnora.yaml:\n%s", manifest)
 	}
-	if _, err := os.Stat(filepath.Join(out, "b")); !os.IsNotExist(err) {
+	if _, err := os.Stat(filepath.Join(out, "b-1")); !os.IsNotExist(err) {
 		t.Errorf("runbook for another environment was generated")
 	}
 }
