@@ -16,14 +16,15 @@ import (
 )
 
 type Options struct {
-	RunbookPaths []string
-	OutputDir    string
-	ConfigPath   string
-	BeforeSQL    []string
-	AfterSQL     []string
-	ProtoPaths   []string
-	BaseDir      string
-	Force        bool
+	RunbookPaths   []string
+	OutputDir      string
+	ConfigPath     string
+	BeforeSQL      []string
+	AfterSQL       []string
+	ProtoPaths     []string
+	BaseDir        string
+	Force          bool
+	ShowJSONDetail bool
 	// ProjectPath / Env / Suite は新形式 (runnora.yaml) の指定。
 	// ConfigPath がなければ runnora.yaml を現在のディレクトリから親へ探して使う。
 	// Suite を指定すると、runbook はスイートの条件で選ぶ (RunbookPaths は指定しない)。
@@ -226,7 +227,7 @@ func Generate(ctx context.Context, opts Options) (*Result, error) {
 		usedFolders[folderID] = scenario.SourcePath
 		result.Warnings = append(result.Warnings, warnings...)
 
-		documents := render.ScenarioDocuments(scenario)
+		documents := render.ScenarioDocuments(scenario, opts.ShowJSONDetail)
 		scenarioDir := filepath.Join(outputDir, folderID)
 		manifestFiles := make([]string, 0, len(documents))
 		for _, document := range documents {
@@ -287,6 +288,12 @@ func makePathsPortable(scenario *model.Scenario, baseDir string) {
 	scenario.SourcePath = portablePath(base, scenario.SourcePath)
 	for index := range scenario.Steps {
 		scenario.Steps[index].SourcePath = portablePath(base, scenario.Steps[index].SourcePath)
+		for i := range scenario.Steps[index].RequestJSONRefs {
+			scenario.Steps[index].RequestJSONRefs[i].Path = portablePath(base, scenario.Steps[index].RequestJSONRefs[i].Path)
+		}
+		for i := range scenario.Steps[index].ResponseBodyJSONRefs {
+			scenario.Steps[index].ResponseBodyJSONRefs[i].Path = portablePath(base, scenario.Steps[index].ResponseBodyJSONRefs[i].Path)
+		}
 	}
 	for index := range scenario.Cases {
 		scenario.Cases[index].SourcePath = portablePath(base, scenario.Cases[index].SourcePath)

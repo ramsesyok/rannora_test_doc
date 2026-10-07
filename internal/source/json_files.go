@@ -82,6 +82,12 @@ func resolveJSONFiles(scenario *model.Scenario, vars any) {
 		}
 		step.RequestJSONFiles = append(step.RequestJSONFiles, referencedJSONFiles(request, localVars, scenario.Cases)...)
 		step.ExpectationJSONFiles = append(step.ExpectationJSONFiles, referencedJSONFiles("{{"+step.Test+"}}", localVars, scenario.Cases)...)
+		baseDir := filepath.Dir(scenario.SourcePath)
+		step.RequestJSONRefs = appendRefs(step.RequestJSONRefs, refsFromValue(request, localVars, scenario.Cases, baseDir))
+		for _, path := range responseBodyVarPaths(step.Test) {
+			step.ResponseBodyJSONRefs = appendRefs(step.ResponseBodyJSONRefs, refsForVariable(path, localVars, scenario.Cases, baseDir))
+		}
+		step.HasResponseBodyCheck = responseResultPattern.MatchString(step.Test)
 	}
 }
 

@@ -69,11 +69,13 @@ func (v includeVars) apply(step *model.Step) {
 		step.HTTP.Query = v.substitute(step.HTTP.Query)
 		step.HTTP.Headers = v.substitute(step.HTTP.Headers)
 		step.RequestJSONFiles = append(step.RequestJSONFiles, v.referencedFiles(step.HTTP.Body)...)
+		step.RequestJSONRefs = appendRefs(step.RequestJSONRefs, v.refsForVars(varPaths(step.HTTP.Body)))
 		step.HTTP.Body = v.substitute(step.HTTP.Body)
 	}
 	if step.GRPC != nil {
 		step.GRPC.Headers = v.substitute(step.GRPC.Headers)
 		step.RequestJSONFiles = append(step.RequestJSONFiles, v.referencedFiles(step.GRPC.Message)...)
+		step.RequestJSONRefs = appendRefs(step.RequestJSONRefs, v.refsForVars(varPaths(step.GRPC.Message)))
 		step.GRPC.Message = v.substitute(step.GRPC.Message)
 	}
 	if strings.HasPrefix(step.Status.Variable, "vars.") {
@@ -82,6 +84,7 @@ func (v includeVars) apply(step *model.Step) {
 		}
 	}
 	step.ExpectationJSONFiles = append(step.ExpectationJSONFiles, v.referencedFiles("{{"+step.Test+"}}")...)
+	step.ResponseBodyJSONRefs = appendRefs(step.ResponseBodyJSONRefs, v.refsForVars(responseBodyVarPaths(step.Test)))
 	step.ExpectationJSONData = append(step.ExpectationJSONData, v.expectationData(step.Test)...)
 }
 

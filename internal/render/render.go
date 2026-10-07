@@ -17,9 +17,16 @@ type Document struct {
 	Content []byte
 }
 
-func ScenarioDocuments(scenario *model.Scenario) []Document {
-	documents := []Document{{Name: "scenario.qmd", Content: []byte(renderScenario(scenario))}}
-	if content := renderCases(scenario); content != "" {
+func ScenarioDocuments(scenario *model.Scenario, showJSONDetail bool) []Document {
+	filenames := !showJSONDetail
+	documents := []Document{{Name: "scenario.qmd", Content: []byte(renderScenarioWithDetail(scenario, filenames))}}
+	cases := ""
+	if filenames {
+		cases = renderCasesFilenames(scenario)
+	} else {
+		cases = renderCases(scenario)
+	}
+	if content := cases; content != "" {
 		documents = append(documents, Document{Name: "cases.qmd", Content: []byte(content)})
 	}
 	if content := renderHooks(scenario, true); content != "" {
@@ -34,19 +41,43 @@ func ScenarioDocuments(scenario *model.Scenario) []Document {
 	if content := renderGRPC(scenario); content != "" {
 		documents = append(documents, Document{Name: "grpc.qmd", Content: []byte(content)})
 	}
-	if content := renderRequestData(scenario, false); content != "" {
+	requestContent := ""
+	grpcRequestContent := ""
+	expectationContent := ""
+	if filenames {
+		for _, step := range scenario.Steps {
+			if step.HTTP != nil && step.HTTP.Body != nil {
+				requestContent = generatedHeader(scenario) + "<!-- リクエスト参照は scenario.qmd に表示 -->\n"
+			}
+			if step.GRPC != nil && step.GRPC.Message != nil {
+				grpcRequestContent = generatedHeader(scenario) + "<!-- gRPC 送信メッセージ参照は scenario.qmd に表示 -->\n"
+			}
+			if step.Test != "" {
+				expectationContent = generatedHeader(scenario) + "<!-- 期待レスポンスボディ参照は scenario.qmd に表示 -->\n"
+			}
+		}
+	} else {
+		requestContent = renderRequestData(scenario, false)
+		grpcRequestContent = renderRequestData(scenario, true)
+		expectationContent = renderExpectations(scenario)
+	}
+	if content := requestContent; content != "" {
 		documents = append(documents, Document{Name: "request-json.qmd", Content: []byte(content)})
 	}
-	if content := renderRequestData(scenario, true); content != "" {
+	if content := grpcRequestContent; content != "" {
 		documents = append(documents, Document{Name: "grpc-request.qmd", Content: []byte(content)})
 	}
-	if content := renderExpectations(scenario); content != "" {
+	if content := expectationContent; content != "" {
 		documents = append(documents, Document{Name: "expectations.qmd", Content: []byte(content)})
 	}
 	return documents
 }
 
 func renderScenario(scenario *model.Scenario) string {
+	return renderScenarioWithDetail(scenario, false)
+}
+
+func renderScenarioWithDetail(scenario *model.Scenario, filenames bool) string {
 	rows := make([][]string, 0, len(scenario.Steps))
 	for _, step := range scenario.Steps {
 		requestReference := ""
@@ -70,7 +101,14 @@ func renderScenario(scenario *model.Scenario) string {
 			detail += "\\\n検証のみ"
 		}
 		if requestReference != "" {
-			requestReference = appendJSONFiles(requestReference, step.RequestJSONFiles)
+			if filenames {
+				requestReference = formatBodyRefs(step.RequestJSONRefs)
+				if requestReference == "" {
+					requestReference = markdownFile(filepath.Base(step.SourcePath)) + "（インライン）"
+				}
+			} else {
+				requestReference = appendJSONFiles(requestReference, step.RequestJSONFiles)
+			}
 		}
 		status := ""
 		if step.Status.Value != "" {
@@ -84,7 +122,7 @@ func renderScenario(scenario *model.Scenario) string {
 			}
 			status = "期待値：\\[" + status + "\\]"
 		}
-		if step.Test != "" {
+		if step.Test != "" && !filenames {
 			if status != "" {
 				status += " "
 			} else {
@@ -92,7 +130,20 @@ func renderScenario(scenario *model.Scenario) string {
 			}
 			status += "@" + label(scenario.ID, "expect", step.ID)
 		}
-		status = appendJSONFiles(status, step.ExpectationJSONFiles)
+		if filenames {
+			body := formatBodyRefs(step.ResponseBodyJSONRefs)
+			if body == "" && step.HasResponseBodyCheck {
+				body = markdownFile(filepath.Base(step.SourcePath)) + ":" + strconv.Itoa(step.SourceLine) + "（検証式）"
+			}
+			if body != "" {
+				if status != "" {
+					status += "\\\n"
+				}
+				status += body
+			}
+		} else {
+			status = appendJSONFiles(status, step.ExpectationJSONFiles)
+		}
 		rows = append(rows, []string{strconv.Itoa(step.Number), detail, requestReference, status, ""})
 	}
 	return generatedHeader(scenario) +
@@ -114,6 +165,105 @@ func appendJSONFiles(reference string, paths []string) string {
 		reference += "\\\n" + name
 	}
 	return reference
+}
+
+func markdownFile(name string) string {
+	return strings.NewReplacer(`\`, `\\`, "_", `\_`, "*", `\*`, "[", `\[`, "]", `\]`, "`", "\\`").Replace(name)
+}
+
+func formatBodyRefs(refs []model.JSONRef) string {
+	type entry struct {
+		path   string
+		fields []string
+		whole  bool
+	}
+	var entries []*entry
+	byPath := map[string]*entry{}
+	basePaths := map[string]map[string]bool{}
+	for _, ref := range refs {
+		if ref.Path == "" {
+			continue
+		}
+		path := filepath.ToSlash(ref.Path)
+		item := byPath[path]
+		if item == nil {
+			item = &entry{path: path}
+			byPath[path] = item
+			entries = append(entries, item)
+		}
+		base := filepath.Base(path)
+		if basePaths[base] == nil {
+			basePaths[base] = map[string]bool{}
+		}
+		basePaths[base][path] = true
+		if ref.FieldPath == "" {
+			item.whole = true
+		} else {
+			found := false
+			for _, field := range item.fields {
+				if field == ref.FieldPath {
+					found = true
+					break
+				}
+			}
+			if !found {
+				item.fields = append(item.fields, ref.FieldPath)
+			}
+		}
+	}
+	var lines []string
+	for _, item := range entries {
+		name := filepath.Base(item.path)
+		if len(basePaths[name]) > 1 {
+			name = item.path
+		}
+		line := markdownFile(name)
+		if !item.whole && len(item.fields) > 0 {
+			line += "（" + strings.Join(item.fields, ", ") + "）"
+		}
+		lines = append(lines, line)
+	}
+	return strings.Join(lines, "\\\n")
+}
+
+func renderCasesFilenames(scenario *model.Scenario) string {
+	if len(scenario.Cases) == 0 {
+		return ""
+	}
+	if len(scenario.Cases) == 1 && len(scenario.Cases[0].Data) == 0 && len(scenario.Cases[0].Expectation) == 0 {
+		return ""
+	}
+	rows := make([][]string, 0, len(scenario.Cases))
+	for _, caseValue := range scenario.Cases {
+		var requests, responses []model.JSONRef
+		for _, step := range scenario.Steps {
+			for _, ref := range step.RequestJSONRefs {
+				if ref.Path == caseValue.SourcePath {
+					requests = append(requests, ref)
+				}
+			}
+			for _, ref := range step.ResponseBodyJSONRefs {
+				if ref.Path == caseValue.SourcePath {
+					responses = append(responses, ref)
+				}
+			}
+		}
+		expect := ""
+		if status, ok := caseValue.Expectation["status"]; ok {
+			expect = "ステータス: " + compactJSON(status)
+		}
+		if body := formatBodyRefs(responses); body != "" {
+			if expect != "" {
+				expect += "\\\n"
+			}
+			expect += body
+		}
+		rows = append(rows, []string{caseValue.Name, caseValue.Description, formatBodyRefs(requests), expect, markdownFile(filepath.Base(caseValue.SourcePath))})
+	}
+	return generatedHeader(scenario) + tableBlock(
+		captionWithScenario("ケースデータ一覧", scenario.Name), label(scenario.ID, "cases"), "16,33,25,10,16",
+		[]string{"ケース", "説明", "入力", "期待値", "出典"}, rows, []int{16, 36, 34, 20, 24},
+		alignLeft, alignLeft, alignLeft, alignLeft, alignLeft)
 }
 
 func renderCases(scenario *model.Scenario) string {

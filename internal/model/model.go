@@ -32,6 +32,9 @@ type Step struct {
 	Status               StatusExpectation
 	RequestJSONFiles     []string
 	ExpectationJSONFiles []string
+	RequestJSONRefs      []JSONRef
+	ResponseBodyJSONRefs []JSONRef
+	HasResponseBodyCheck bool
 	RequestJSONData      []JSONData
 	ExpectationJSONData  []JSONData
 	SourcePath           string
@@ -41,6 +44,13 @@ type Step struct {
 type JSONData struct {
 	Path  string
 	Value any
+}
+
+// JSONRef identifies the part of a source file used as a request or an
+// expected response body. An empty FieldPath means the whole file is used.
+type JSONRef struct {
+	Path      string
+	FieldPath string
 }
 
 type StepKind string
