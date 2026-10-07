@@ -587,7 +587,18 @@ func slug(value string) string {
 		_, _ = hash.Write([]byte(value))
 		return fmt.Sprintf("scenario-%08x", hash.Sum32())
 	}
+	// These names cannot be used as directory names on Windows.
+	if result == "con" || result == "prn" || result == "aux" || result == "nul" ||
+		(len(result) == 4 && (strings.HasPrefix(result, "com") || strings.HasPrefix(result, "lpt")) && result[3] >= '1' && result[3] <= '9') {
+		return "scenario-" + result
+	}
 	return result
+}
+
+// OutputID applies the same filesystem-safe normalization used for runbook
+// filenames. The generator also uses it for runnora.id-based output folders.
+func OutputID(value string) string {
+	return slug(value)
 }
 
 func valueString(v any) string {

@@ -14,10 +14,11 @@ import (
 func TestManifestStepsMatchRunnoraKeys(t *testing.T) {
 	const http = "runners:\n  req:\n    endpoint: http://example.test\n"
 	tests := []struct {
-		name  string
-		files map[string]string
-		id    string
-		steps []manifestStep
+		name   string
+		files  map[string]string
+		id     string
+		folder string
+		steps  []manifestStep
 	}{
 		{
 			name: "top level, loop and include",
@@ -50,7 +51,8 @@ func TestManifestStepsMatchRunnoraKeys(t *testing.T) {
     test: true
 `,
 			},
-			id: "LIB-001",
+			id:     "LIB-001",
+			folder: "lib-001",
 			steps: []manifestStep{
 				{Number: 1, Key: "member_before"},
 				{Number: 2, Key: "member_loans", Loop: true},
@@ -88,8 +90,9 @@ steps:
 `,
 				"case.json": `{"name": "default", "expect": {"status": 200}}`,
 			},
-			id:    "GEN-getBook",
-			steps: []manifestStep{{Number: 1, Key: "run_case.call_api", Loop: true}},
+			id:     "GEN-getBook",
+			folder: "gen-getbook",
+			steps:  []manifestStep{{Number: 1, Key: "run_case.call_api", Loop: true}},
 		},
 		{
 			name: "list steps without runnora block",
@@ -101,7 +104,8 @@ steps:
   - test: true
 `,
 			},
-			steps: []manifestStep{{Number: 1, Key: "0"}, {Number: 2, Key: "1"}},
+			folder: "main",
+			steps:  []manifestStep{{Number: 1, Key: "0"}, {Number: 2, Key: "1"}},
 		},
 	}
 	for _, tt := range tests {
@@ -116,7 +120,7 @@ steps:
 			if _, err := Generate(context.Background(), Options{RunbookPaths: []string{filepath.Join(dir, "main.yml")}, OutputDir: out}); err != nil {
 				t.Fatal(err)
 			}
-			data, err := os.ReadFile(filepath.Join(out, "main", "manifest.json"))
+			data, err := os.ReadFile(filepath.Join(out, tt.folder, "manifest.json"))
 			if err != nil {
 				t.Fatal(err)
 			}

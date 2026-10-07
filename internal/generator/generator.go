@@ -192,6 +192,7 @@ func Generate(ctx context.Context, opts Options) (*Result, error) {
 	var plan []plannedFile
 	result := &Result{Warnings: planWarnings}
 	usedIDs := map[string]string{}
+	usedFolders := map[string]string{}
 	for _, in := range inputs {
 		if err := ctx.Err(); err != nil {
 			return nil, err
@@ -200,15 +201,33 @@ func Generate(ctx context.Context, opts Options) (*Result, error) {
 		if err != nil {
 			return nil, err
 		}
+		block, _, err := project.ReadBlock(in.path)
+		if err != nil {
+			return nil, err
+		}
+		scenarioID := ""
+		// Keep scenario.ID based on the filename so generated table labels stay stable.
+		folderID := scenario.ID
+		if block != nil {
+			scenarioID = block.ID
+			if strings.TrimSpace(scenarioID) == "" {
+				return nil, fmt.Errorf("%s: runnora.id が空です", in.path)
+			}
+			folderID = source.OutputID(scenarioID)
+		}
 		makePathsPortable(scenario, in.opts.BaseDir)
 		if previous, exists := usedIDs[scenario.ID]; exists {
 			return nil, fmt.Errorf("出力 ID %q が重複します: %s, %s", scenario.ID, previous, scenario.SourcePath)
 		}
 		usedIDs[scenario.ID] = scenario.SourcePath
+		if previous, exists := usedFolders[folderID]; exists {
+			return nil, fmt.Errorf("同じ生成コマンド内で出力フォルダ名 %q が重複します: %s, %s", folderID, previous, scenario.SourcePath)
+		}
+		usedFolders[folderID] = scenario.SourcePath
 		result.Warnings = append(result.Warnings, warnings...)
 
 		documents := render.ScenarioDocuments(scenario)
-		scenarioDir := filepath.Join(outputDir, scenario.ID)
+		scenarioDir := filepath.Join(outputDir, folderID)
 		manifestFiles := make([]string, 0, len(documents))
 		for _, document := range documents {
 			path := filepath.Join(scenarioDir, document.Name)
@@ -219,10 +238,6 @@ func Generate(ctx context.Context, opts Options) (*Result, error) {
 		steps := make([]manifestStep, 0, len(scenario.Steps))
 		for _, s := range scenario.Steps {
 			steps = append(steps, manifestStep{Number: s.Number, Key: s.Key, Loop: s.Loop})
-		}
-		scenarioID := ""
-		if block, _, err := project.ReadBlock(in.path); err == nil && block != nil {
-			scenarioID = block.ID
 		}
 		manifestData, err := json.MarshalIndent(manifest{
 			Generator:  "runnora-docgen",

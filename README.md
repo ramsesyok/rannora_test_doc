@@ -64,6 +64,10 @@ C:\tools\runnora-docgen.exe generate --suite scenarios --out docs\generated\scen
 C:\tools\runnora-docgen.exe generate --env unit --out docs\generated\one runbooks\scenarios\lib-001.yml
 ```
 
+各 runbook の原稿は `--out` の下に個別のフォルダを作って出力します。`runnora.id` があればその値を小文字・ハイフン区切りにした名前を使います（例：`LIB-001` → `lib-001/`）。指定がなければ従来どおり runbook のファイル名から拡張子を除いた名前を同じ規則で変換します。1 回の生成コマンドで複数の runbook が同じフォルダ名になる場合は、`--force` の有無にかかわらずエラーにします。既存の出力フォルダへの再生成は、従来どおり `--force` で上書きできます。
+
+既存の文書で生成原稿を Quarto の `include` から参照している場合、`runnora.id` によってフォルダ名が変わると参照パスの更新が必要です。`--force` は新しい出力先を上書きしますが、以前のフォルダは削除しません。
+
 前処理・後処理の表には、`runnora run` と同じ順で SQL を載せます。
 
 - 前処理：環境の `hooks.before` → スイートの `hooks.before` → runbook の `runnora:` ブロックの `before`

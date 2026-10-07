@@ -145,14 +145,14 @@ func renderHTTP(scenario *model.Scenario) string {
 		}
 		rows = append(rows, []string{
 			strconv.Itoa(step.Number), step.HTTP.Method,
-			joinURL(step.HTTP.Endpoint, step.HTTP.Path), compactJSON(step.HTTP.Headers), queryCell(step.HTTP.Query),
+			joinURL(step.HTTP.Endpoint, step.HTTP.Path), headerCell(step.HTTP.Headers), queryCell(step.HTTP.Query),
 		})
 	}
 	if len(rows) == 0 {
 		return ""
 	}
 	return generatedHeader(scenario) + tableBlock(
-		captionWithScenario("HTTP 呼び出し情報", scenario.Name), label(scenario.ID, "http"), "6,8,46,20,20",
+		captionWithScenario("HTTP 呼び出し情報", scenario.Name), label(scenario.ID, "http"), "6,8,40,23,23",
 		[]string{"手順", "Method", "URL", "Headers", "Query"}, rows, []int{6, 8, 54, 32, 32},
 		alignCenter, alignLeft, alignLeft, alignLeft, alignLeft)
 }
@@ -197,7 +197,7 @@ func renderRequestData(scenario *model.Scenario, grpc bool) string {
 		}
 		rows := flattenRows(value)
 		headers := []string{"JSON path", "値"}
-		widthsAttr := "35,65"
+		widthsAttr := "50,50"
 		widths := []int{34, 70}
 		if len(step.RequestJSONData) > 0 {
 			rows = [][]string{{"参照式", "$", compactJSON(value)}}
@@ -245,13 +245,13 @@ func renderExpectations(scenario *model.Scenario) string {
 		if step.Test == "" {
 			continue
 		}
-		rows := [][]string{{"検証式", sourceLocation(step.SourcePath, step.SourceLine), step.Test}}
+		rows := [][]string{{"検証式", sourceLocation(step.SourcePath, step.SourceLine), breakConditions(step.Test)}}
 		if step.Status.Value != "" {
 			rows = append(rows, []string{"ステータス", "検証式から抽出", step.Status.Protocol + " " + step.Status.Value})
 		}
 		for _, asset := range step.ExpectationJSONData {
 			for _, row := range flattenRows(asset.Value) {
-				rows = append(rows, []string{"参照JSON", filepath.Base(asset.Path), row[0] + ": " + row[1]})
+				rows = append(rows, []string{"期待値JSON", filepath.Base(asset.Path), row[0] + ": " + row[1]})
 			}
 		}
 		if strings.Contains(step.Test, "vars.case.") {
@@ -267,7 +267,7 @@ func renderExpectations(scenario *model.Scenario) string {
 			}
 		}
 		blocks.WriteString(tableBlockWithMerge(
-			fmt.Sprintf("期待値・検証条件（%s／手順 %d）", scenario.Name, step.Number), label(scenario.ID, "expect", step.ID), "18,20,62", true,
+			fmt.Sprintf("期待値・検証条件（%s／手順 %d）", scenario.Name, step.Number), label(scenario.ID, "expect", step.ID), "10,20,62", true,
 			[]string{"区分", "出典", "内容"}, rows, []int{18, 26, 72}))
 		blocks.WriteByte('\n')
 	}
@@ -281,10 +281,12 @@ func renderHooks(scenario *model.Scenario, before bool) string {
 	assets := scenario.AfterHooks
 	caption := "後処理"
 	labelPart := "after"
+	widthsAttr := "10,30,60"
 	if before {
 		assets = scenario.BeforeHooks
 		caption = "前処理"
 		labelPart = "before"
+		widthsAttr = "6,34,60"
 	}
 	if len(assets) == 0 {
 		return ""
@@ -295,7 +297,7 @@ func renderHooks(scenario *model.Scenario, before bool) string {
 		rows = append(rows, []string{strconv.Itoa(i + 1), filepath.Base(asset.Path), asset.Path})
 	}
 	return generatedHeader(scenario) + tableBlock(
-		captionWithScenario(caption, scenario.Name), label(scenario.ID, labelPart), "10,30,60",
+		captionWithScenario(caption, scenario.Name), label(scenario.ID, labelPart), widthsAttr,
 		[]string{"順序", "ファイル", "出典"}, rows, []int{6, 30, 60})
 }
 
@@ -393,6 +395,88 @@ func queryCell(value any) string {
 		}
 	}
 	return strings.Join(lines, "\\\n")
+}
+
+// headerCell shows each top-level HTTP header on its own line without the
+// enclosing JSON object braces. Commas in quoted values or nested JSON stay put.
+func headerCell(value any) string {
+	encoded := compactJSON(value)
+	if len(encoded) < 2 || encoded[0] != '{' || encoded[len(encoded)-1] != '}' {
+		return encoded
+	}
+	inner := encoded[1 : len(encoded)-1]
+	if inner == "" {
+		return ""
+	}
+	var members []string
+	start, depth := 0, 0
+	quoted, escaped := false, false
+	for i := 0; i < len(inner); i++ {
+		switch inner[i] {
+		case '\\':
+			if quoted && !escaped {
+				escaped = true
+				continue
+			}
+		case '"':
+			if !escaped {
+				quoted = !quoted
+			}
+		case '{', '[':
+			if !quoted {
+				depth++
+			}
+		case '}', ']':
+			if !quoted {
+				depth--
+			}
+		case ',':
+			if !quoted && depth == 0 {
+				members = append(members, inner[start:i+1])
+				start = i + 1
+			}
+		}
+		escaped = false
+	}
+	members = append(members, inner[start:])
+	return strings.Join(members, "\\\n")
+}
+
+// breakConditions adds a visible line break after each logical AND, while
+// leaving && inside string literals untouched.
+func breakConditions(expression string) string {
+	var parts []string
+	start := 0
+	quote := byte(0)
+	escaped := false
+	for i := 0; i < len(expression); i++ {
+		character := expression[i]
+		if quote != 0 {
+			if character == '\\' && !escaped {
+				escaped = true
+				continue
+			}
+			if character == quote && !escaped {
+				quote = 0
+			}
+			escaped = false
+			continue
+		}
+		if character == '"' || character == '\'' || character == '`' {
+			quote = character
+			continue
+		}
+		if character == '&' && i+1 < len(expression) && expression[i+1] == '&' {
+			parts = append(parts, strings.TrimSpace(expression[start:i])+" &&")
+			i++
+			start = i + 1
+		}
+	}
+	if len(parts) == 0 {
+		return expression
+	}
+	parts = append(parts, strings.TrimSpace(expression[start:]))
+	return strings.Join(parts, "\\\n")
 }
 
 func compactJSON(value any) string {
